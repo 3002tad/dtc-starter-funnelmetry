@@ -11,6 +11,7 @@ Medusa DTC Starter — a Turborepo workspace monorepo containing a Medusa backen
 ├── apps/
 │   ├── backend/                  # Medusa application (@dtc/backend)
 │   │   ├── medusa-config.ts      # Medusa config: DB URL, CORS, secrets, modules
+│   │   ├── integration-tests/    # setup.js (Jest setupFiles) and http/*.spec.ts suites
 │   │   └── src/
 │   │       ├── admin/            # Admin dashboard extensions (widgets/, i18n/, routes)
 │   │       ├── api/              # API routes: api/store/*, api/admin/* (file-based)

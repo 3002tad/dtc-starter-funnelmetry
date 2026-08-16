@@ -137,10 +137,31 @@ export default function ProductActions({
 
   return (
     <>
-      <div className="flex flex-col gap-y-2" ref={actionsRef}>
+      <div
+        className="flex flex-col gap-y-5 rounded-lg border border-ui-border-base bg-ui-bg-subtle p-5 shadow-elevation-card-rest"
+        ref={actionsRef}
+      >
+        <div className="flex items-center justify-between gap-x-4">
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-ui-fg-muted">
+            Purchase options
+          </span>
+          {selectedVariant && (
+            <span
+              className={
+                inStock
+                  ? "text-small-regular text-green-700"
+                  : "text-small-regular text-ui-fg-error"
+              }
+              data-testid="product-stock-status"
+            >
+              {inStock ? "Available" : "Unavailable"}
+            </span>
+          )}
+        </div>
+
         <div>
           {(product.variants?.length ?? 0) > 1 && (
-            <div className="flex flex-col gap-y-4">
+            <div className="flex flex-col gap-y-5">
               {(product.options || []).map((option) => {
                 return (
                   <div key={option.id}>
@@ -172,7 +193,7 @@ export default function ProductActions({
             !isValidVariant
           }
           variant="primary"
-          className="w-full h-10"
+          className="h-12 w-full"
           isLoading={isAdding}
           data-testid="add-product-button"
         >

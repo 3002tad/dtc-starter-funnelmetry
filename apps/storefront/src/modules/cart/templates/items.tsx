@@ -13,7 +13,10 @@ const ItemsTemplate = ({ cart }: ItemsTemplateProps) => {
   const items = cart?.items
   return (
     <div>
-      <div className="pb-3 flex items-center">
+      <div className="flex flex-col gap-y-2 pb-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ui-fg-muted">
+          Your shopping bag
+        </p>
         <Heading className="text-[2rem] leading-[2.75rem]">Cart</Heading>
       </div>
       <Table>

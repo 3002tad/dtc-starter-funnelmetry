@@ -65,13 +65,20 @@ const CartDropdown = ({
 
   const pathname = usePathname()
 
-  // open cart dropdown when modifying the cart items, but only if we're not on the cart page
+  // Keep the cart route unobstructed; elsewhere, briefly preview a cart update.
   useEffect(() => {
-    if (itemRef.current !== totalItems && !pathname.includes("/cart")) {
+    if (pathname.includes("/cart")) {
+      close()
+      itemRef.current = totalItems
+      return
+    }
+
+    if (itemRef.current !== totalItems) {
       timedOpen()
     }
+    itemRef.current = totalItems
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalItems, itemRef.current])
+  }, [totalItems, pathname])
 
   return (
     <div

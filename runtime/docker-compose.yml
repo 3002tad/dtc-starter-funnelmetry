@@ -1,7 +1,6 @@
 name: medusa_reference
 
-# Docker supplies local dependencies only. Run Medusa and its Next.js
-# storefront natively, keeping upstream source free of Docker-specific paths.
+# Docker runtime lives outside `apps/`, keeping upstream Medusa source intact.
 services:
   postgres:
     image: postgres:15-alpine
@@ -19,15 +18,44 @@ services:
       timeout: 5s
       retries: 20
 
-  redis:
-    image: redis:7-alpine
+  backend:
+    build:
+      context: ..
+      dockerfile: runtime/Dockerfile
+    command: >-
+      sh -c "cd apps/backend && pnpm exec medusa db:migrate && pnpm dev"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://medusa:medusa@postgres:5432/medusa?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      STORE_CORS: http://localhost:8000
+      ADMIN_CORS: http://localhost:9000
+      AUTH_CORS: http://localhost:9000
+      JWT_SECRET: local-development-only-jwt-secret
+      COOKIE_SECRET: local-development-only-cookie-secret
     ports:
-      - "127.0.0.1:6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
+      - "127.0.0.1:9000:9000"
+
+  storefront:
+    build:
+      context: ..
+      dockerfile: runtime/Dockerfile
+    command: sh -c "cd apps/storefront && pnpm dev"
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://api.localhost:9000
+      NEXT_PUBLIC_DEFAULT_REGION: dk
+    env_file:
+      - path: ../apps/storefront/.env.local
+        required: false
+    extra_hosts:
+      - "api.localhost:host-gateway"
+    ports:
+      - "127.0.0.1:8000:8000"
 
 volumes:
   postgres_data:

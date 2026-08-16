@@ -41,7 +41,7 @@ export default function CategoryTemplate({
 
   return (
     <div
-      className="flex flex-col small:flex-row small:items-start py-6 content-container"
+      className="content-container flex flex-col gap-8 py-10 small:flex-row small:items-start small:gap-12 small:py-16"
       data-testid="category-container"
     >
       <RefinementList
@@ -50,30 +50,29 @@ export default function CategoryTemplate({
         hideOptionsPicker
       />
       <div className="w-full">
-        <div className="flex flex-row mb-8 text-2xl-semi gap-4">
-          {parents &&
-            parents.map((parent) => (
-              <span key={parent.id} className="text-ui-fg-subtle">
-                <LocalizedClientLink
-                  className="mr-4 hover:text-black"
-                  href={`/categories/${parent.handle}`}
-                  data-testid="sort-by-link"
-                >
-                  {parent.name}
-                </LocalizedClientLink>
-                /
-              </span>
-            ))}
-          <h1 data-testid="category-page-title">{category.name}</h1>
+        <div className="mb-10 border-b border-ui-border-base pb-8">
+          {parents.length > 0 && (
+            <div className="mb-4 flex flex-wrap gap-x-2 text-sm text-ui-fg-subtle">
+              {parents.map((parent) => (
+                <span key={parent.id}>
+                  <LocalizedClientLink className="hover:text-ui-fg-base" href={`/categories/${parent.handle}`} data-testid="sort-by-link">
+                    {parent.name}
+                  </LocalizedClientLink>
+                  <span className="ml-2">/</span>
+                </span>
+              ))}
+            </div>
+          )}
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ui-fg-subtle">Collection</p>
+          <h1 className="mt-3 text-4xl font-medium tracking-[-0.03em] text-ui-fg-base" data-testid="category-page-title">{category.name}</h1>
+          {category.description && (
+            <p className="mt-3 max-w-xl text-sm leading-6 text-ui-fg-subtle">{category.description}</p>
+          )}
         </div>
-        {category.description && (
-          <div className="mb-8 text-base-regular">
-            <p>{category.description}</p>
-          </div>
-        )}
         {category.category_children && (
-          <div className="mb-8 text-base-large">
-            <ul className="grid grid-cols-1 gap-2">
+          <div className="mb-10">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-ui-fg-subtle">Explore within {category.name}</p>
+            <ul className="flex flex-wrap gap-2">
               {category.category_children?.map((c) => (
                 <li key={c.id}>
                   <InteractiveLink href={`/categories/${c.handle}`}>

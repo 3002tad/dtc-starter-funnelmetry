@@ -25,7 +25,7 @@ export default async function CheckoutForm({
   }
 
   return (
-    <div className="w-full grid grid-cols-1 gap-y-8">
+    <div className="grid w-full grid-cols-1 gap-y-8 rounded-lg border border-ui-border-base bg-ui-bg-base p-5 small:p-8">
       <Addresses cart={cart} customer={customer} />
 
       <Shipping cart={cart} availableShippingMethods={shippingMethods} />

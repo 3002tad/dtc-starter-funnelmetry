@@ -17,11 +17,31 @@ export default async function Nav() {
 
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">
+      <div className="bg-[#10231d] text-white">
+        <div className="content-container flex h-9 items-center justify-center gap-3 text-center text-[11px] font-medium tracking-[0.08em]">
+          <span>Spring edit: considered essentials for everyday wear.</span>
+          <LocalizedClientLink
+            href="/categories/shirts"
+            className="underline underline-offset-4 transition hover:text-[#d8e5bc]"
+            data-testid="campaign-bar-link"
+          >
+            Shop now
+          </LocalizedClientLink>
+        </div>
+      </div>
       <header className="relative h-16 mx-auto border-b duration-200 bg-white border-ui-border-base">
         <nav className="content-container txt-xsmall-plus text-ui-fg-subtle flex items-center justify-between w-full h-full text-small-regular">
-          <div className="flex-1 basis-0 h-full flex items-center">
+          <div className="flex-1 basis-0 h-full flex items-center gap-x-6">
             <div className="h-full">
               <SideMenu regions={regions} locales={locales} currentLocale={currentLocale} />
+            </div>
+            <div className="hidden small:flex items-center gap-x-5 h-full text-sm">
+              <LocalizedClientLink className="hover:text-ui-fg-base" href="/store" data-testid="nav-shop-link">
+                Shop
+              </LocalizedClientLink>
+              <LocalizedClientLink className="hover:text-ui-fg-base" href="/store?sortBy=created_at" data-testid="nav-new-arrivals-link">
+                New arrivals
+              </LocalizedClientLink>
             </div>
           </div>
 
@@ -31,7 +51,7 @@ export default async function Nav() {
               className="txt-compact-xlarge-plus hover:text-ui-fg-base uppercase"
               data-testid="nav-store-link"
             >
-              Medusa Store
+              Northstar Goods
             </LocalizedClientLink>
           </div>
 

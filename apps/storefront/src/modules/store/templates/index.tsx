@@ -23,13 +23,21 @@ const StoreTemplate = ({
 
   return (
     <div
-      className="flex flex-col small:flex-row small:items-start py-6 content-container"
+      className="content-container flex flex-col gap-8 py-10 small:flex-row small:items-start small:gap-12 small:py-16"
       data-testid="category-container"
     >
       <RefinementList sortBy={sort} />
       <div className="w-full">
-        <div className="mb-8 text-2xl-semi">
-          <h1 data-testid="store-page-title">All products</h1>
+        <div className="mb-10 border-b border-ui-border-base pb-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ui-fg-subtle">
+            The full edit
+          </p>
+          <h1 className="mt-3 text-4xl font-medium tracking-[-0.03em] text-ui-fg-base" data-testid="store-page-title">
+            All products
+          </h1>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-ui-fg-subtle">
+            Browse the complete Northstar collection and find the pieces that fit your everyday.
+          </p>
         </div>
         <Suspense fallback={<SkeletonProductGrid />}>
           <PaginatedProducts

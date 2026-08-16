@@ -23,9 +23,9 @@ const OptionSelect: React.FC<OptionSelectProps> = ({
 
   return (
     <div className="flex flex-col gap-y-3">
-      <span className="text-sm">Select {title}</span>
+      <span className="text-sm font-medium text-ui-fg-base">Select {title}</span>
       <div
-        className="flex flex-wrap justify-between gap-2"
+        className="flex flex-wrap gap-2"
         data-testid={dataTestId}
       >
         {filteredOptions.map((v) => {
@@ -34,15 +34,16 @@ const OptionSelect: React.FC<OptionSelectProps> = ({
               onClick={() => updateOption(option.id, v)}
               key={v}
               className={clx(
-                "border-ui-border-base bg-ui-bg-subtle border text-small-regular h-10 rounded-rounded p-2 flex-1 ",
+                "min-w-16 border border-ui-border-base bg-ui-bg-base px-4 py-2 text-small-regular transition-colors duration-150",
                 {
-                  "border-ui-border-interactive": v === current,
-                  "hover:shadow-elevation-card-rest transition-shadow ease-in-out duration-150":
+                  "border-ui-fg-base bg-ui-fg-base text-ui-bg-base": v === current,
+                  "hover:border-ui-fg-base hover:shadow-elevation-card-rest":
                     v !== current,
                 }
               )}
               disabled={disabled}
               data-testid="option-button"
+              aria-pressed={v === current}
             >
               {v}
             </button>

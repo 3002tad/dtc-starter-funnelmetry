@@ -73,7 +73,7 @@ export default async function PaginatedProducts({
   return (
     <>
       <ul
-        className="grid grid-cols-2 w-full small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8"
+        className="grid w-full grid-cols-2 gap-x-4 gap-y-10 small:grid-cols-3 small:gap-x-6 medium:grid-cols-4"
         data-testid="products-list"
       >
         {products.map((p) => {
@@ -84,6 +84,12 @@ export default async function PaginatedProducts({
           )
         })}
       </ul>
+      {products.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-ui-border-base bg-ui-bg-subtle px-6 py-16 text-center">
+          <p className="text-lg font-medium text-ui-fg-base">No products found</p>
+          <p className="mt-2 text-sm text-ui-fg-subtle">Try another filter or return to the full collection.</p>
+        </div>
+      )}
       {totalPages > 1 && (
         <Pagination
           data-testid="product-pagination"

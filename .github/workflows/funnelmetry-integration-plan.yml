@@ -1,0 +1,56 @@
+name: Funnelmetry integration plan
+
+on:
+  pull_request:
+    paths:
+      - funnelmetry.integration.yaml
+      - .github/workflows/funnelmetry-integration-plan.yml
+  workflow_dispatch:
+
+# The workflow can only read Medusa source and upload artifacts. It cannot commit,
+# open a PR, merge, deploy or access runtime integration secrets.
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Validate and generate review artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Medusa source
+        uses: actions/checkout@v4
+        with:
+          path: medusa
+
+      # This ref must remain pinned to a reviewed Funnelmetry release commit/tag
+      # before enabling the workflow on a production repository.
+      - name: Checkout Funnelmetry CI planner
+        uses: actions/checkout@v4
+        with:
+          repository: 3002tad/Funnelmetry
+          ref: main
+          path: funnelmetry
+          # Fine-grained PAT or GitHub App token: Contents = Read, scoped only
+          # to 3002tad/Funnelmetry. This secret is unavailable to fork PRs.
+          token: ${{ secrets.FUNNELMETRY_PLANNER_READ_TOKEN }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run plan-only integration check
+        run: |
+          mkdir -p "$RUNNER_TEMP/funnelmetry-plan"
+          node funnelmetry/tools/medusa-ci-installer/src/cli.mjs plan \
+            --config "$GITHUB_WORKSPACE/medusa/funnelmetry.integration.yaml" \
+            --project "$GITHUB_WORKSPACE/medusa" \
+            --out "$RUNNER_TEMP/funnelmetry-plan"
+
+      - name: Upload review artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: funnelmetry-integration-plan-${{ github.sha }}
+          path: ${{ runner.temp }}/funnelmetry-plan
+          if-no-files-found: error
+          retention-days: 14

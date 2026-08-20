@@ -1,0 +1,25 @@
+# BẢN SAO GIẢI THÍCH — không nằm trong .github/workflows nên sẽ không tự chạy.
+# Workflow thật: .github/workflows/funnelmetry-integration-plan.yml
+
+name: Funnelmetry integration plan (giải thích)
+
+# PLAN: đọc manifest, kiểm tra tương thích Medusa và xuất artifact để review.
+# Quyền chỉ đọc nên không thể sửa source, tạo branch/PR, merge hay deploy.
+# Candidate patch chỉ nằm trong artifact, không được tự áp dụng vào repository.
+permissions:
+  contents: read
+
+# PROPOSE (chưa triển khai): workflow riêng, chỉ chạy thủ công sau approval.
+# Nó sẽ tạo nhánh mới + Draft PR từ patch đã review; tuyệt đối không tự merge/deploy.
+# Khi có, chỉ cấp quyền ghi tối thiểu và không dùng pull_request_target.
+
+manifest:
+  file: funnelmetry.integration.yaml
+  # Người tích hợp điền source.id, ingest.url, event frontend/backend và tên biến key.
+  # YAML chỉ chứa *_key_ref; giá trị browser/backend key phải nằm trong Secret/runtime.
+
+plan_flow:
+  - "Checkout Medusa: chỉ đọc source để kiểm tra."
+  - "Checkout Funnelmetry planner: dùng token Contents: Read cho private repo."
+  - "Chạy CLI plan: sinh report và candidate patch vào RUNNER_TEMP."
+  - "Upload artifact: reviewer tải về xem trước khi quyết định tạo Draft PR."

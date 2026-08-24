@@ -40,7 +40,11 @@ will not run the private planner checkout. Do not replace `pull_request` with
    are injected only at runtime from the customer secret manager.
 
 `ingest.url` is intentionally a placeholder until an environment-specific ingress
-endpoint exists. Do not put secret values in the manifest.
+endpoint exists. The generated binding embeds this non-secret endpoint and reads
+the key names declared by `browser_write_key_ref` and `backend_signing_key_ref`.
+For the browser, the configured write-key name is exposed with the `NEXT_PUBLIC_`
+prefix; the backend signing key is never exposed to the storefront. Do not put
+secret values in the manifest.
 
 ## Initial activation prerequisite
 

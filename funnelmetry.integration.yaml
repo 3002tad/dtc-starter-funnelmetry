@@ -28,3 +28,12 @@ frontend:
 backend:
   enabled: true
   binding: medusa.order_placed
+
+# Các giá trị này là budget của Integration Kit; không chứa secret và không
+# được phép biến lỗi Funnelmetry thành lỗi checkout/order của Medusa.
+reliability:
+  failure_mode: fail_open
+  timeout_ms: 800
+  max_queue_size: 200
+  retry:
+    max_attempts: 3

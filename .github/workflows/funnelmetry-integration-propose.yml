@@ -1,0 +1,106 @@
+name: Funnelmetry integration propose
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: "Nhánh/commit Medusa làm cơ sở để tạo nhánh tích hợp"
+        required: true
+        default: main
+        type: string
+      planner_ref:
+        description: "Commit SHA đã review của 3002tad/Funnelmetry (không dùng branch động)"
+        required: true
+        type: string
+      confirm_apply:
+        description: "Gõ đúng APPLY để xác nhận chỉ tạo nhánh review"
+        required: true
+        type: string
+
+# This workflow can create one review branch only. It never merges, deploys,
+# reads runtime integration secrets, or runs when a source branch is pushed.
+permissions:
+  contents: read
+
+jobs:
+  propose:
+    if: ${{ inputs.confirm_apply == 'APPLY' }}
+    name: Generate and propose integration branch
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout selected Medusa base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base_ref }}
+          path: medusa
+          fetch-depth: 0
+
+      - name: Checkout reviewed Funnelmetry planner
+        uses: actions/checkout@v4
+        with:
+          repository: 3002tad/Funnelmetry
+          ref: ${{ inputs.planner_ref }}
+          path: funnelmetry
+          persist-credentials: false
+          # Fine-grained PAT or GitHub App token: Contents = Read, scoped only
+          # to 3002tad/Funnelmetry. It must not have host-repository write access.
+          token: ${{ secrets.FUNNELMETRY_PLANNER_READ_TOKEN }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate review patch
+        run: |
+          mkdir -p "$RUNNER_TEMP/funnelmetry-plan"
+          node funnelmetry/tools/medusa-ci-installer/src/cli.mjs plan \
+            --config "$GITHUB_WORKSPACE/medusa/funnelmetry.integration.yaml" \
+            --project "$GITHUB_WORKSPACE/medusa" \
+            --out "$RUNNER_TEMP/funnelmetry-plan"
+
+      - name: Validate generated-file allowlist
+        working-directory: medusa
+        run: |
+          git apply --check "$RUNNER_TEMP/funnelmetry-plan/integration.patch"
+          while IFS= read -r file; do
+            case "$file" in
+              "package.json" | "apps/backend/package.json" | "apps/backend/src/subscribers/funnelmetry-order-placed.ts" | "apps/storefront/package.json" | "apps/storefront/tsconfig.json" | "apps/storefront/src/app/layout.tsx" | "apps/storefront/src/app/[countryCode]/(main)/products/[handle]/page.tsx" | "apps/storefront/src/modules/products/components/product-actions/index.tsx" | "apps/storefront/src/app/[countryCode]/(checkout)/checkout/page.tsx" | "apps/storefront/src/funnelmetry/client.tsx") ;;
+              *) echo "Generated patch changes a non-owned file: $file" >&2; exit 1 ;;
+            esac
+          done < <(git apply --numstat "$RUNNER_TEMP/funnelmetry-plan/integration.patch" | cut -f3)
+
+      - name: Apply patch and create review branch
+        id: branch
+        working-directory: medusa
+        run: |
+          branch="funnelmetry/integration/${GITHUB_RUN_ID}"
+          git switch --create "$branch"
+          git apply --index "$RUNNER_TEMP/funnelmetry-plan/integration.patch"
+          git diff --cached --check
+          test -n "$(git diff --cached --name-only)"
+          git config user.name "funnelmetry-integration-bot[bot]"
+          git config user.email "funnelmetry-integration-bot[bot]@users.noreply.github.com"
+          git commit -m "chore(integration): propose Funnelmetry input binding"
+          git push origin "HEAD:refs/heads/$branch"
+          echo "name=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Publish review handoff
+        run: |
+          {
+            echo "## Funnelmetry integration proposal"
+            echo
+            echo "Created review branch: \`${{ steps.branch.outputs.name }}\`."
+            echo "The branch was generated from \`${{ inputs.base_ref }}\` using planner commit \`${{ inputs.planner_ref }}\`."
+            echo "Review the diff and run the normal Medusa CI before merging. This workflow did not merge, deploy, or access runtime secrets."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload generated review artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: funnelmetry-integration-proposal-${{ github.run_id }}
+          path: ${{ runner.temp }}/funnelmetry-plan
+          if-no-files-found: error
+          retention-days: 14

@@ -1,47 +1,59 @@
 name: Funnelmetry integration propose
 
 on:
-  workflow_dispatch:
-    inputs:
-      base_ref:
-        description: "Nhánh/commit Medusa làm cơ sở để tạo nhánh tích hợp"
-        required: true
-        default: main
-        type: string
-      planner_ref:
-        description: "Commit SHA đã review của 3002tad/Funnelmetry (không dùng branch động)"
-        required: true
-        type: string
-      confirm_apply:
-        description: "Gõ đúng APPLY để xác nhận chỉ tạo nhánh review"
-        required: true
-        type: string
+  push:
+    branches:
+      - "funnelmetry/integration/**"
+    paths:
+      - funnelmetry.integration.yaml
 
-# This workflow can create one review branch only. It never merges, deploys,
-# reads runtime integration secrets, or runs when a source branch is pushed.
+# A manifest commit is the source owner's authorization to update that same
+# integration branch. This workflow never creates branches, merges, deploys,
+# or reads runtime integration secrets.
 permissions:
   contents: read
 
 jobs:
   propose:
-    if: ${{ inputs.confirm_apply == 'APPLY' }}
-    name: Generate and propose integration branch
+    name: Generate and apply integration proposal to current branch
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Checkout selected Medusa base
+      - name: Validate immutable planner and current target branch
+        env:
+          TARGET_REF: ${{ github.ref_name }}
+          PLANNER_REF: ${{ vars.FUNNELMETRY_PLANNER_REF }}
+        run: |
+          if [[ ! "$TARGET_REF" =~ ^funnelmetry/integration/[a-z0-9][a-z0-9._-]{0,80}$ ]]; then
+            echo "The current branch must be a pre-created branch under funnelmetry/integration/" >&2
+            exit 1
+          fi
+          if [[ ! "$PLANNER_REF" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Repository variable FUNNELMETRY_PLANNER_REF must be a reviewed immutable 40-character commit SHA" >&2
+            exit 1
+          fi
+
+      - name: Checkout selected Medusa integration branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.base_ref }}
+          ref: ${{ github.ref_name }}
           path: medusa
           fetch-depth: 0
+
+      - name: Verify checked-out target branch
+        working-directory: medusa
+        env:
+          TARGET_REF: ${{ github.ref_name }}
+        run: |
+          test "$(git branch --show-current)" = "$TARGET_REF"
+          git show-ref --verify --quiet "refs/remotes/origin/$TARGET_REF"
 
       - name: Checkout reviewed Funnelmetry planner
         uses: actions/checkout@v4
         with:
           repository: 3002tad/Funnelmetry
-          ref: ${{ inputs.planner_ref }}
+          ref: ${{ vars.FUNNELMETRY_PLANNER_REF }}
           path: funnelmetry
           persist-credentials: false
           # Fine-grained PAT or GitHub App token: Contents = Read, scoped only
@@ -61,6 +73,11 @@ jobs:
             --project "$GITHUB_WORKSPACE/medusa" \
             --out "$RUNNER_TEMP/funnelmetry-plan"
 
+      - name: Read plan metadata
+        id: plan_metadata
+        run: |
+          node -e 'const fs = require("node:fs"); const plan = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/funnelmetry-plan/integration-plan.json", "utf8")); fs.appendFileSync(process.env.GITHUB_OUTPUT, "source_fingerprint=" + plan.sourceFingerprint + "\\nchange_count=" + plan.changes.length + "\\n")'
+
       - name: Validate generated-file allowlist
         working-directory: medusa
         run: |
@@ -72,29 +89,37 @@ jobs:
             esac
           done < <(git apply --numstat "$RUNNER_TEMP/funnelmetry-plan/integration.patch" | cut -f3)
 
-      - name: Apply patch and create review branch
-        id: branch
+      - name: Apply patch to target branch
+        id: apply
         working-directory: medusa
+        env:
+          TARGET_REF: ${{ github.ref_name }}
         run: |
-          branch="funnelmetry/integration/${GITHUB_RUN_ID}"
-          git switch --create "$branch"
           git apply --index "$RUNNER_TEMP/funnelmetry-plan/integration.patch"
           git diff --cached --check
-          test -n "$(git diff --cached --name-only)"
+          if git diff --cached --quiet; then
+            echo "status=no_changes" >> "$GITHUB_OUTPUT"
+            echo "commit=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           git config user.name "funnelmetry-integration-bot[bot]"
           git config user.email "funnelmetry-integration-bot[bot]@users.noreply.github.com"
           git commit -m "chore(integration): propose Funnelmetry input binding"
-          git push origin "HEAD:refs/heads/$branch"
-          echo "name=$branch" >> "$GITHUB_OUTPUT"
+          git push origin "HEAD:refs/heads/$TARGET_REF"
+          echo "status=applied" >> "$GITHUB_OUTPUT"
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Publish review handoff
         run: |
           {
             echo "## Funnelmetry integration proposal"
             echo
-            echo "Created review branch: \`${{ steps.branch.outputs.name }}\`."
-            echo "The branch was generated from \`${{ inputs.base_ref }}\` using planner commit \`${{ inputs.planner_ref }}\`."
-            echo "Review the diff and run the normal Medusa CI before merging. This workflow did not merge, deploy, or access runtime secrets."
+            echo "Target branch: \`${{ github.ref_name }}\`."
+            echo "Result: \`${{ steps.apply.outputs.status }}\`."
+            echo "Commit: \`${{ steps.apply.outputs.commit || 'none' }}\`."
+            echo "The proposal used planner commit \`${{ vars.FUNNELMETRY_PLANNER_REF }}\`."
+            echo "Source fingerprint: \`${{ steps.plan_metadata.outputs.source_fingerprint }}\`; planned files: \`${{ steps.plan_metadata.outputs.change_count }}\`."
+            echo "Review the diff and run normal Medusa CI before merging. This workflow did not create another branch, merge, deploy, or access runtime secrets."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload generated review artifact

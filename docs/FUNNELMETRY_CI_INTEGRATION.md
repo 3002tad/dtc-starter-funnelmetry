@@ -16,14 +16,13 @@ The workflow [funnelmetry-integration-plan.yml](../.github/workflows/funnelmetry
 The planner rejects an artifact directory inside the Medusa checkout. The workflow
 also has `contents: read`, so it cannot push, create PRs, or merge generated code.
 
-The manually dispatched [funnelmetry-integration-propose.yml](../.github/workflows/funnelmetry-integration-propose.yml)
-uses the same planner artifact only after the operator enters `APPLY`. It validates
-the patch against a fixed generated-file allowlist. The target design is that the
-customer creates `funnelmetry/integration/<name>` first; `propose` then checks out,
-commits to, and pushes only that named branch. It does not open a PR, merge, deploy,
-or alter any other branch. The current workflow still creates a review branch and
-must be updated to the target-branch model before this behavior is claimed as
-implemented.
+The push-triggered [funnelmetry-integration-propose.yml](../.github/workflows/funnelmetry-integration-propose.yml)
+runs when `funnelmetry.integration.yaml` changes on a pre-created
+`funnelmetry/integration/<name>` branch. That manifest commit is the source owner's
+authorization to apply the generated patch. `propose` validates the branch prefix,
+checks out, commits to, and pushes only the current branch. It does not open a PR,
+create another branch, merge, deploy, or alter any other branch. A rerun with an empty
+planner patch ends as `no_changes` rather than creating an empty commit.
 
 ## Private Funnelmetry repository access
 
@@ -38,14 +37,20 @@ GitHub does not expose repository secrets to pull requests from forks, so a fork
 will not run the private planner checkout. Do not replace `pull_request` with
 `pull_request_target` just to make the secret available.
 
+The automatic apply workflow runs on a direct push and therefore executes the workflow
+definition from that integration branch. Enable it only for trusted source owners or
+maintainers who are allowed to change the workflow; do not use it as a workflow for
+untrusted external contributions. Branch protection and a least-privilege planner token
+remain required even though the token only reads the private Funnelmetry repository.
+
 ## Review and release flow
 
 1. Change the manifest in a branch and open a PR.
 2. Download the generated patch artifact and review its ownership/capability report.
 3. Create `funnelmetry/integration/<name>` from the reviewed host branch. After a
    host update, merge/rebase that host branch here before rerunning `plan`.
-4. If approved, run **Funnelmetry integration propose**, supplying this target branch,
-   a reviewed immutable Funnelmetry planner commit SHA, and `APPLY`.
+4. Push the manifest change. **Funnelmetry integration propose** applies the generated
+   patch to the same integration branch automatically.
 5. Review the new commit in a normal source PR and merge it through the Medusa
    release process. A source fingerprint/layout mismatch must stop the workflow;
    it must not apply an old patch opportunistically.
@@ -76,9 +81,9 @@ secret values in the manifest.
 
 ## Initial activation prerequisite
 
-The workflow references `3002tad/Funnelmetry@main`. Before enabling it on GitHub,
-the Funnelmetry repository must contain the reviewed installer commit. The proposal
-workflow requires an immutable commit SHA explicitly; do not provide `main` or any
-other mutable branch. The current packages are still internal prototype packages,
+Before enabling either workflow, set the Medusa repository variable
+`FUNNELMETRY_PLANNER_REF` to the reviewed 40-character Funnelmetry commit SHA. Both
+workflows reject an empty, branch, tag, or other mutable reference. The current
+packages are still internal prototype packages,
 so their registry or source-delivery mechanism must be established before a
 generated branch is expected to pass a production host build.

@@ -22,13 +22,22 @@ jobs:
         with:
           path: medusa
 
-      # This ref must remain pinned to a reviewed Funnelmetry release commit/tag
-      # before enabling the workflow on a production repository.
+      - name: Validate immutable Funnelmetry planner reference
+        env:
+          PLANNER_REF: ${{ vars.FUNNELMETRY_PLANNER_REF }}
+        run: |
+          if [[ ! "$PLANNER_REF" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Repository variable FUNNELMETRY_PLANNER_REF must be a reviewed immutable 40-character commit SHA" >&2
+            exit 1
+          fi
+
+      # The repository variable is configured once by an administrator. It is
+      # never read from a contributor-controlled manifest or mutable branch.
       - name: Checkout Funnelmetry CI planner
         uses: actions/checkout@v4
         with:
           repository: 3002tad/Funnelmetry
-          ref: main
+          ref: ${{ vars.FUNNELMETRY_PLANNER_REF }}
           path: funnelmetry
           # Fine-grained PAT or GitHub App token: Contents = Read, scoped only
           # to 3002tad/Funnelmetry. This secret is unavailable to fork PRs.

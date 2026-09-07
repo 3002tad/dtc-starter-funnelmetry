@@ -1,5 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
-import { createBackendForwarder } from "@3002tad/funnelmetry-backend-integration-kit"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 
 type OrderPlacedData = { id: string }
 type OrderItem = { product_id?: string; variant_id?: string; quantity?: number; unit_price?: number }
@@ -9,11 +9,15 @@ const sourceKeyId = "medusa-reference-dev"
 const reliability = {"failureMode":"fail_open","timeoutMs":800,"maxQueueSize":200,"retry":{"maxAttempts":3}}
 
 export default async function funnelmetryOrderPlaced({ event, container }: SubscriberArgs<OrderPlacedData>) {
-  const logger = container.resolve("logger") as { warn: (message: string) => void }
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER) as { warn: (message: string) => void }
   try {
-    const orderModuleService = container.resolve("order") as { retrieveOrder: (id: string, options: Record<string, unknown>) => Promise<Order> }
+    const { createBackendForwarder } = await import("@3002tad/funnelmetry-backend-integration-kit")
+    const orderModuleService = container.resolve(Modules.ORDER) as { retrieveOrder: (id: string, options: Record<string, unknown>) => Promise<Order> }
     const order = await orderModuleService.retrieveOrder(event.data.id, { relations: ["items"] })
-    if (!order.created_at || !order.currency_code) throw new Error("Missing authoritative order time/currency")
+    if (!order.created_at || !order.currency_code) {
+      logger.warn("Funnelmetry order forward skipped: missing authoritative order time/currency")
+      return
+    }
     const forwarder = createBackendForwarder({
       sourceId,
       sourceKeyId,

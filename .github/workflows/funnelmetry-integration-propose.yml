@@ -105,9 +105,6 @@ jobs:
         env:
           TARGET_REF: ${{ github.ref_name }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://api.localhost:9000
-          NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: pk_ci_placeholder
-          NEXT_PUBLIC_FUNNELMETRY_BROWSER_WRITE_KEY: ci-placeholder
         run: |
           git apply --index --allow-empty "$RUNNER_TEMP/funnelmetry-plan/integration.patch"
           pnpm install --lockfile-only
@@ -121,7 +118,7 @@ jobs:
           git diff --cached --check
           pnpm install --frozen-lockfile
           pnpm --filter @dtc/backend build
-          pnpm --filter @dtc/storefront build
+          pnpm --filter @dtc/storefront exec tsc --noEmit --pretty false
           if git diff --cached --quiet; then
             echo "status=no_changes" >> "$GITHUB_OUTPUT"
             echo "commit=" >> "$GITHUB_OUTPUT"

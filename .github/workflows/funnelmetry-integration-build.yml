@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   build:
-    name: Resolve pinned packages and build Medusa host
+    name: Resolve packages and validate Medusa bindings
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Medusa source
@@ -40,9 +40,5 @@ jobs:
       - name: Build backend
         run: pnpm --filter @dtc/backend build
 
-      - name: Build storefront
-        run: pnpm --filter @dtc/storefront build
-        env:
-          NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://api.localhost:9000
-          NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: pk_ci_placeholder
-          NEXT_PUBLIC_FUNNELMETRY_BROWSER_WRITE_KEY: ci-placeholder
+      - name: Type-check storefront integration
+        run: pnpm --filter @dtc/storefront exec tsc --noEmit --pretty false

@@ -54,8 +54,11 @@ remain required even though the token only reads the private Funnelmetry reposit
 5. Review the new commit in a normal source PR and merge it through the Medusa
    release process. A source fingerprint/layout mismatch must stop the workflow;
    it must not apply an old patch opportunistically.
-6. The proposal workflow resolves the pinned private packages and commits the updated
-   `pnpm-lock.yaml`. The normal CI installs with `--frozen-lockfile` and builds the host.
+6. The proposal workflow resolves the pinned private packages, installs with
+   `--frozen-lockfile`, builds the Medusa backend, type-checks the storefront binding,
+   and only then commits the updated `pnpm-lock.yaml`. A full Next.js production build
+   also needs a running, seeded Medusa API because the DTC starter generates catalog
+   pages from live data; that runtime-level check belongs to the next integration gate.
    The browser write key is injected at storefront build time; the backend signing
    key is injected only into the backend runtime. Neither is a package credential.
 

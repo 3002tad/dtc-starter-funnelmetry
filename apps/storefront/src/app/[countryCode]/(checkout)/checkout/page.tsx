@@ -4,6 +4,7 @@ import PaymentWrapper from "@modules/checkout/components/payment-wrapper"
 import CheckoutForm from "@modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
 import CheckoutProgress from "@modules/checkout/components/checkout-progress"
+import { FunnelmetryCheckoutStarted } from "@funnelmetry/client"
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 
@@ -30,7 +31,9 @@ export default async function Checkout({ searchParams }: CheckoutPageProps) {
   const customer = await retrieveCustomer()
 
   return (
-    <div className="content-container py-10 small:py-14">
+    <>
+      <FunnelmetryCheckoutStarted cartId={cart.id} step={currentStep} />
+      <div className="content-container py-10 small:py-14">
       <div className="mb-10 max-w-2xl">
         <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-ui-fg-muted">
           Checkout
@@ -43,6 +46,7 @@ export default async function Checkout({ searchParams }: CheckoutPageProps) {
         </PaymentWrapper>
         <CheckoutSummary cart={cart} />
       </div>
-    </div>
+      </div>
+    </>
   )
 }

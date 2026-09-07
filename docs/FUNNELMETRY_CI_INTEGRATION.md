@@ -54,8 +54,10 @@ remain required even though the token only reads the private Funnelmetry reposit
 5. Review the new commit in a normal source PR and merge it through the Medusa
    release process. A source fingerprint/layout mismatch must stop the workflow;
    it must not apply an old patch opportunistically.
-6. The normal CI builds the host image. Browser write key and backend signing key
-   are injected only at runtime from the customer secret manager.
+6. The proposal workflow resolves the pinned private packages and commits the updated
+   `pnpm-lock.yaml`. The normal CI installs with `--frozen-lockfile` and builds the host.
+   The browser write key is injected at storefront build time; the backend signing
+   key is injected only into the backend runtime. Neither is a package credential.
 
 Protect `main` and other important branches with a GitHub ruleset/branch protection.
 `contents: write` is a repository-level token permission; workflow input checks are
@@ -86,7 +88,11 @@ storefront. Do not put secret values in the manifest.
 
 Before enabling either workflow, set the Medusa repository variable
 `FUNNELMETRY_PLANNER_REF` to the reviewed 40-character Funnelmetry commit SHA. Both
-workflows reject an empty, branch, tag, or other mutable reference. The current
-packages are still internal prototype packages,
-so their registry or source-delivery mechanism must be established before a
-generated branch is expected to pass a production host build.
+workflows reject an empty, branch, tag, or other mutable reference.
+
+The integration packages are distributed privately through GitHub Packages under
+the `@3002tad` scope. Before `propose` or the integration build resolves them, grant
+this Medusa repository Actions read access from each package's settings. The
+committed `.npmrc` contains only the registry and `${NODE_AUTH_TOKEN}` reference;
+it never contains the token value. Publication is restricted to a reviewed
+`integration-kit-v<version>` tag in the Funnelmetry repository.

@@ -8,8 +8,16 @@ trong runtime image; source upstream dưới `apps/` không cần patch.
 
 - Docker Desktop đang chạy
 - Cổng `5432`, `8000` và `9000` chưa bị chiếm
+- Biến `FUNNELMETRY_PACKAGE_READ_TOKEN` chứa token chỉ có quyền đọc GitHub Packages
 
 Thực hiện các lệnh dưới đây tại thư mục `Medusa_Reference`.
+
+Token package chỉ được Docker BuildKit mount trong bước `pnpm install`, không được
+ghi vào manifest, `.env.local` hoặc image:
+
+```powershell
+$env:FUNNELMETRY_PACKAGE_READ_TOKEN = "<read-only-package-token>"
+```
 
 ## 1. Khởi động runtime
 

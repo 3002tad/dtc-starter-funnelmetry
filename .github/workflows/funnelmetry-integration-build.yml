@@ -1,0 +1,48 @@
+name: Funnelmetry integration build
+
+on:
+  push:
+    branches:
+      - "funnelmetry/integration/**"
+    paths:
+      - pnpm-lock.yaml
+  pull_request:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build:
+    name: Resolve pinned packages and build Medusa host
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Medusa source
+        uses: actions/checkout@v4
+
+      - name: Set up Node and GitHub Packages
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: https://npm.pkg.github.com
+          scope: "@3002tad"
+
+      - name: Set up pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.11.1 --activate
+
+      - name: Install exact dependency graph
+        run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build backend
+        run: pnpm --filter @dtc/backend build
+
+      - name: Build storefront
+        run: pnpm --filter @dtc/storefront build
+        env:
+          NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://api.localhost:9000
+          NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: pk_ci_placeholder
+          NEXT_PUBLIC_FUNNELMETRY_BROWSER_WRITE_KEY: ci-placeholder

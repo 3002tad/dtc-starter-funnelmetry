@@ -1,5 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
-import { createBackendForwarder } from "@funnelmetry/backend-integration-kit"
+import { createBackendForwarder } from "@3002tad/funnelmetry-backend-integration-kit"
 
 type OrderPlacedData = { id: string }
 type OrderItem = { product_id?: string; variant_id?: string; quantity?: number; unit_price?: number }

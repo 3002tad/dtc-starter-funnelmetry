@@ -4,6 +4,14 @@ Docker runs PostgreSQL, Medusa and the Next.js storefront. `pnpm` is installed
 only inside the runtime image; upstream code under `apps/` has no Docker or
 Edge-runtime patch.
 
+The private Funnelmetry packages are resolved while building the image. Export a
+GitHub token with read-only `read:packages` access; Docker mounts it as a BuildKit
+secret and does not store it in an image layer:
+
+```powershell
+$env:FUNNELMETRY_PACKAGE_READ_TOKEN = "<read-only-package-token>"
+```
+
 ```powershell
 docker compose -f runtime/docker-compose.yml up -d --build
 ```

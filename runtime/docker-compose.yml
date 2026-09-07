@@ -22,6 +22,8 @@ services:
     build:
       context: ..
       dockerfile: runtime/Dockerfile
+      secrets:
+        - npm_token
     command: >-
       sh -c "cd apps/backend && pnpm exec medusa db:migrate && pnpm dev"
     depends_on:
@@ -42,6 +44,8 @@ services:
     build:
       context: ..
       dockerfile: runtime/Dockerfile
+      secrets:
+        - npm_token
     command: sh -c "cd apps/storefront && pnpm dev"
     depends_on:
       backend:
@@ -59,3 +63,7 @@ services:
 
 volumes:
   postgres_data:
+
+secrets:
+  npm_token:
+    environment: FUNNELMETRY_PACKAGE_READ_TOKEN

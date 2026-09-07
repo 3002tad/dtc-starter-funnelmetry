@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { createBrowserSdk } from "@funnelmetry/browser-sdk"
+import { createBrowserSdk } from "@3002tad/funnelmetry-browser-sdk"
 
 const sourceId = "medusa-reference"
 const sourceKeyId = "medusa-reference-dev"

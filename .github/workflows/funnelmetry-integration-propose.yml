@@ -6,6 +6,7 @@ on:
       - "funnelmetry/integration/**"
     paths:
       - funnelmetry.integration.yaml
+      - .github/workflows/funnelmetry-integration-propose.yml
 
 # A manifest commit is the source owner's authorization to update that same
 # integration branch. This workflow never creates branches, merges, deploys,

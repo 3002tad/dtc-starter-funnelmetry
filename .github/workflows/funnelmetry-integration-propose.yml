@@ -1,6 +1,7 @@
 name: Funnelmetry integration propose
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - "funnelmetry/integration/**"

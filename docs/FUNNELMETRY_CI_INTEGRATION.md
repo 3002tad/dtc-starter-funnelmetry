@@ -72,12 +72,15 @@ success. The control build cannot establish funnel-behavior causality because it
 does not emit Browser SDK data. If both variants emit to Funnelmetry, isolate their
 analysis with an approved source partition or experiment label before aggregating.
 
-`ingest.url` is intentionally a placeholder until an environment-specific ingress
-endpoint exists. The generated binding embeds this non-secret endpoint and reads
-the key names declared by `browser_write_key_ref` and `backend_signing_key_ref`.
-For the browser, the configured write-key name is exposed with the `NEXT_PUBLIC_`
-prefix; the backend signing key is never exposed to the storefront. Do not put
-secret values in the manifest.
+`ingest.browser_url` is the non-secret endpoint embedded in the Browser SDK and must
+be reachable from the shopper's browser. `ingest.backend_url` is embedded in the
+Medusa subscriber and may be an internal/container-reachable endpoint. This split is
+needed when the storefront browser reaches the host via `localhost` while a separate
+backend container reaches it via `host.docker.internal` or an internal DNS name. The
+bindings read the key names declared by `browser_write_key_ref` and
+`backend_signing_key_ref`. For the browser, the configured write-key name is exposed
+with the `NEXT_PUBLIC_` prefix; the backend signing key is never exposed to the
+storefront. Do not put secret values in the manifest.
 
 ## Initial activation prerequisite
 

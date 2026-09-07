@@ -98,12 +98,15 @@ jobs:
             esac
           done < <(git apply --numstat --allow-empty "$RUNNER_TEMP/funnelmetry-plan/integration.patch" | cut -f3)
 
-      - name: Apply patch to target branch
+      - name: Apply patch, resolve packages, and validate host build
         id: apply
         working-directory: medusa
         env:
           TARGET_REF: ${{ github.ref_name }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://api.localhost:9000
+          NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: pk_ci_placeholder
+          NEXT_PUBLIC_FUNNELMETRY_BROWSER_WRITE_KEY: ci-placeholder
         run: |
           git apply --index --allow-empty "$RUNNER_TEMP/funnelmetry-plan/integration.patch"
           pnpm install --lockfile-only
@@ -115,6 +118,9 @@ jobs:
           fi
           git add pnpm-lock.yaml
           git diff --cached --check
+          pnpm install --frozen-lockfile
+          pnpm --filter @dtc/backend build
+          pnpm --filter @dtc/storefront build
           if git diff --cached --quiet; then
             echo "status=no_changes" >> "$GITHUB_OUTPUT"
             echo "commit=" >> "$GITHUB_OUTPUT"

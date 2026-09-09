@@ -1,8 +1,13 @@
 # Local runtime
 
-Docker runs PostgreSQL, Medusa and the Next.js storefront. `pnpm` is installed
-only inside the runtime image; upstream code under `apps/` has no Docker or
-Edge-runtime patch.
+Docker runs PostgreSQL, a compiled Medusa Admin/backend and the Next.js
+storefront. `pnpm` is installed only inside the runtime image; upstream code
+under `apps/` has no Docker or Edge-runtime patch. The backend runs `medusa
+start`, not `medusa develop`, so the reference environment does not depend on
+the Vite development server at runtime. It runs the bundle under
+`apps/backend/.medusa/server`, which is created during the image build.
+The local Compose profile explicitly permits an insecure session cookie for
+`http://localhost`; deployments must omit that override and use HTTPS.
 
 The private Funnelmetry packages are resolved while building the image. Export a
 GitHub token with read-only `read:packages` access; Docker mounts it as a BuildKit

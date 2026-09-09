@@ -43,6 +43,22 @@ maintainers who are allowed to change the workflow; do not use it as a workflow 
 untrusted external contributions. Branch protection and a least-privilege planner token
 remain required even though the token only reads the private Funnelmetry repository.
 
+## Runtime delivery behavior
+
+The generated backend binding is deliberately managed fire-and-forget. A Medusa
+`order.placed` subscriber schedules order mapping and delivery, then returns without
+waiting for Funnelmetry. The generated dispatcher serializes a bounded in-memory queue,
+uses the pinned backend kit for timeout and bounded retry, and opens a cooldown circuit
+after the manifest's `reliability.circuit_breaker.failure_threshold`. Thus an unavailable
+Pipeline, full queue, invalid integration credential, or exhausted retry cannot fail,
+retry, or delay the checkout/order business operation.
+
+This is not an outbox or a durable source queue: an event that is dropped because the
+queue is full, exhausts retry, or is present during a host restart has not crossed the
+durable handoff boundary. The dispatcher emits controlled warning telemetry and its
+metrics distinguish accepted, duplicate, rejected, retry-exhausted, queue-full, and
+circuit-open outcomes. Reconciliation is still required to quantify the pre-handoff gap.
+
 ## Review and release flow
 
 1. Change the manifest in a branch and open a PR.

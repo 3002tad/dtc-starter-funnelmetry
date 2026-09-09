@@ -94,7 +94,7 @@ jobs:
           git apply --check --allow-empty "$RUNNER_TEMP/funnelmetry-plan/integration.patch"
           while IFS= read -r file; do
             case "$file" in
-              "package.json" | "apps/backend/package.json" | "apps/backend/src/subscribers/funnelmetry-order-placed.ts" | "apps/storefront/package.json" | "apps/storefront/tsconfig.json" | "apps/storefront/src/app/layout.tsx" | "apps/storefront/src/app/[countryCode]/(main)/products/[handle]/page.tsx" | "apps/storefront/src/modules/products/components/product-actions/index.tsx" | "apps/storefront/src/app/[countryCode]/(checkout)/checkout/page.tsx" | "apps/storefront/src/funnelmetry/client.tsx") ;;
+              "package.json" | "apps/backend/package.json" | "apps/backend/src/funnelmetry/managed-delivery-dispatcher.ts" | "apps/backend/src/subscribers/funnelmetry-order-placed.ts" | "apps/storefront/package.json" | "apps/storefront/tsconfig.json" | "apps/storefront/src/app/layout.tsx" | "apps/storefront/src/app/[countryCode]/(main)/products/[handle]/page.tsx" | "apps/storefront/src/modules/products/components/product-actions/index.tsx" | "apps/storefront/src/app/[countryCode]/(checkout)/checkout/page.tsx" | "apps/storefront/src/funnelmetry/client.tsx") ;;
               *) echo "Generated patch changes a non-owned file: $file" >&2; exit 1 ;;
             esac
           done < <(git apply --numstat --allow-empty "$RUNNER_TEMP/funnelmetry-plan/integration.patch" | cut -f3)

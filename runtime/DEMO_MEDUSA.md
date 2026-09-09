@@ -19,6 +19,26 @@ ghi vào manifest, `.env.local` hoặc image:
 $env:FUNNELMETRY_PACKAGE_READ_TOKEN = "<read-only-package-token>"
 ```
 
+## Funnelmetry binding khi Pipeline chưa được cấu hình
+
+Medusa vẫn có thể build và chạy khi chưa có Pipeline. Không cấu hình browser write key
+hoặc backend signing key chỉ làm binding Funnelmetry inactive/fail-open; storefront,
+checkout và order không được phép lỗi vì lý do analytics. Không đưa giá trị key vào source:
+browser write key chỉ inject ở build storefront, còn backend signing key chỉ inject tại
+runtime backend khi chạy integration gate riêng.
+
+## Kiểm tra image trước khi chạy
+
+Dockerfile có target `validate` độc lập với runtime image. Nó cài đúng dependency từ
+lockfile, build Medusa backend và type-check storefront mà không cần chạy Pipeline:
+
+```powershell
+docker build --target validate --secret id=npm_token,env=FUNNELMETRY_PACKAGE_READ_TOKEN -f runtime/Dockerfile .
+```
+
+Chỉ sau khi target này pass mới build/chạy stack local. Token phải được đặt tạm trong
+terminal hoặc secret manager của máy; không commit, không đặt vào `.env.local` và không gửi vào chat.
+
 ## 1. Khởi động runtime
 
 ```powershell

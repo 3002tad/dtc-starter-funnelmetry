@@ -11,6 +11,11 @@ module.exports = defineConfig({
       authCors: process.env.AUTH_CORS!,
       jwtSecret: process.env.JWT_SECRET,
       cookieSecret: process.env.COOKIE_SECRET,
-    }
+    },
+    // Docker's local reference host uses HTTP. Production keeps the secure
+    // cookie default unless this explicit local-only environment flag is set.
+    cookieOptions: {
+      secure: process.env.MEDUSA_COOKIE_SECURE !== "false",
+    },
   }
 })

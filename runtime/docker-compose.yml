@@ -25,7 +25,7 @@ services:
       secrets:
         - npm_token
     command: >-
-      sh -c "cd apps/backend && pnpm exec medusa db:migrate && pnpm dev"
+      sh -c "cd apps/backend && pnpm exec medusa db:migrate && cd .medusa/server && ../../node_modules/.bin/medusa start"
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,6 +37,7 @@ services:
       AUTH_CORS: http://localhost:9000
       JWT_SECRET: local-development-only-jwt-secret
       COOKIE_SECRET: local-development-only-cookie-secret
+      MEDUSA_COOKIE_SECURE: "false"
     ports:
       - "127.0.0.1:9000:9000"
 

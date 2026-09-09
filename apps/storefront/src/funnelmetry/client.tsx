@@ -6,7 +6,7 @@ import { createBrowserSdk } from "@3002tad/funnelmetry-browser-sdk"
 const sourceId = "medusa-reference"
 const sourceKeyId = "medusa-reference-dev"
 const allowedEventTypes = ["behavior.product_viewed","cart.add_clicked","checkout.started"]
-const reliability = {"failureMode":"fail_open","timeoutMs":800,"maxQueueSize":200,"retry":{"maxAttempts":3}}
+const reliability = {"failureMode":"fail_open","timeoutMs":800,"maxQueueSize":200,"retry":{"maxAttempts":3},"circuitBreaker":{"failureThreshold":3,"cooldownMs":30000}}
 
 type EventPayload = Record<string, unknown>
 type BrowserSdk = ReturnType<typeof createBrowserSdk>

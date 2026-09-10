@@ -23,7 +23,7 @@ image cuối cùng.
 ## 2. Khởi động lần đầu
 
 ```powershell
-docker compose -f runtime/docker-compose.yml up -d --build
+docker compose --env-file apps/storefront/.env.local -f runtime/docker-compose.yml up -d --build
 docker compose -f runtime/docker-compose.yml ps
 ```
 
@@ -66,15 +66,15 @@ Nếu chưa có `apps/storefront/.env.local`, tạo từ mẫu:
 Copy-Item runtime/storefront.env.example apps/storefront/.env.local
 ```
 
-Điền publishable key vào biến sau, rồi recreate storefront để Next.js nhận biến
-build/runtime:
+Điền publishable key vào biến sau. Giá trị `NEXT_PUBLIC_*` được Next.js đóng gói
+vào browser bundle tại `next build`, vì vậy mỗi thay đổi cần build lại storefront:
 
 ```env
 NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_...
 ```
 
 ```powershell
-docker compose -f runtime/docker-compose.yml up -d --build --force-recreate storefront
+docker compose --env-file apps/storefront/.env.local -f runtime/docker-compose.yml up -d --build --force-recreate storefront
 ```
 
 `NEXT_PUBLIC_MEDUSA_BACKEND_URL` đã được Compose đặt thành

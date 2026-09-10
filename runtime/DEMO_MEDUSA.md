@@ -39,10 +39,16 @@ docker build --target validate --secret id=npm_token,env=FUNNELMETRY_PACKAGE_REA
 Chỉ sau khi target này pass mới build/chạy stack local. Token phải được đặt tạm trong
 terminal hoặc secret manager của máy; không commit, không đặt vào `.env.local` và không gửi vào chat.
 
+Storefront production chạy `next build` rồi `next start`, không chạy Turbopack
+development server. Vì Next.js đóng gói mọi `NEXT_PUBLIC_*` vào browser bundle ở
+lúc build, file `.env.local` phải được truyền cho Compose khi build. Publishable
+key và browser write key là public client configuration; backend signing key không
+được đưa vào build argument.
+
 ## 1. Khởi động runtime
 
 ```powershell
-docker compose -f runtime/docker-compose.yml up -d --build
+docker compose --env-file apps/storefront/.env.local -f runtime/docker-compose.yml up -d --build
 docker compose -f runtime/docker-compose.yml ps
 ```
 

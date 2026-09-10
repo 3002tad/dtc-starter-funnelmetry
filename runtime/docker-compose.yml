@@ -22,6 +22,7 @@ services:
     build:
       context: ..
       dockerfile: runtime/Dockerfile
+      target: backend-runtime
       secrets:
         - npm_token
     command: >-
@@ -45,15 +46,22 @@ services:
     build:
       context: ..
       dockerfile: runtime/Dockerfile
+      target: storefront-runtime
+      args:
+        NEXT_PUBLIC_MEDUSA_BACKEND_URL: ${NEXT_PUBLIC_MEDUSA_BACKEND_URL:-http://api.localhost:9000}
+        NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY:-}
+        NEXT_PUBLIC_DEFAULT_REGION: ${NEXT_PUBLIC_DEFAULT_REGION:-dk}
+        NEXT_PUBLIC_FUNNELMETRY_BROWSER_WRITE_KEY: ${NEXT_PUBLIC_FUNNELMETRY_BROWSER_WRITE_KEY:-}
       secrets:
         - npm_token
-    command: sh -c "cd apps/storefront && pnpm dev"
+    command: sh -c "cd apps/storefront && ./node_modules/.bin/next start -p 8000"
     depends_on:
       backend:
         condition: service_started
     environment:
-      NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://api.localhost:9000
-      NEXT_PUBLIC_DEFAULT_REGION: dk
+      NEXT_PUBLIC_MEDUSA_BACKEND_URL: ${NEXT_PUBLIC_MEDUSA_BACKEND_URL:-http://api.localhost:9000}
+      NEXT_PUBLIC_DEFAULT_REGION: ${NEXT_PUBLIC_DEFAULT_REGION:-dk}
+      NEXT_TELEMETRY_DISABLED: "1"
     env_file:
       - path: ../apps/storefront/.env.local
         required: false

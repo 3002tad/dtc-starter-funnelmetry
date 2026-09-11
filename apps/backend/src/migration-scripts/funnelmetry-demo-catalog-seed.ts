@@ -1,6 +1,7 @@
 import { MedusaContainer } from "@medusajs/framework"
 import {
   ContainerRegistrationKeys,
+  MedusaError,
   ProductStatus,
 } from "@medusajs/framework/utils"
 import {
@@ -9,11 +10,56 @@ import {
 } from "@medusajs/medusa/core-flows"
 
 const productCount = 100
-const handlePrefix = "funnelmetry-demo-"
-const imageUrl =
-  "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png"
+const handlePrefix = "funnelmetry-catalog-"
+const catalogSourceUrl =
+  "https://dummyjson.com/products?limit=100&select=id,title,description,category,price,thumbnail,images,brand"
+const catalogSourceName = "DummyJSON Products API"
+const sourcePriceToEurRate = 0.92
 
-const categoryNames = ["Shirts", "Sweatshirts", "Pants", "Merch"]
+type CatalogSourceProduct = {
+  id: number
+  title: string
+  description: string
+  category: string
+  price: number
+  thumbnail: string
+  images: string[]
+  brand?: string
+}
+
+type CatalogSourceResponse = {
+  products: CatalogSourceProduct[]
+}
+
+async function loadCatalogSource(): Promise<CatalogSourceProduct[]> {
+  const response = await fetch(catalogSourceUrl)
+
+  if (!response.ok) {
+    throw new MedusaError(
+      MedusaError.Types.UNEXPECTED_STATE,
+      `Could not load catalog source: ${response.status}`
+    )
+  }
+
+  const catalog = (await response.json()) as CatalogSourceResponse
+  const products = catalog.products.filter(
+    (product) =>
+      Number.isInteger(product.id) &&
+      product.title &&
+      product.description &&
+      product.price > 0 &&
+      (product.images?.length > 0 || product.thumbnail)
+  )
+
+  if (products.length !== productCount) {
+    throw new MedusaError(
+      MedusaError.Types.UNEXPECTED_STATE,
+      `Catalog source must provide exactly ${productCount} usable products, received ${products.length}`
+    )
+  }
+
+  return products
+}
 
 export default async function funnelmetryDemoCatalogSeed({
   container,
@@ -22,6 +68,7 @@ export default async function funnelmetryDemoCatalogSeed({
 }) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
+  const catalogSourceProducts = await loadCatalogSource()
 
   const { data: salesChannels } = await query.graph({
     entity: "sales_channel",
@@ -37,60 +84,46 @@ export default async function funnelmetryDemoCatalogSeed({
   })
   const shippingProfile = shippingProfiles[0]
 
+  if (!defaultSalesChannel || !shippingProfile) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      "Catalog seed requires an existing sales channel and shipping profile"
+    )
+  }
+
   const { data: productOptions } = await query.graph({
     entity: "product_option",
     fields: ["id", "title"],
   })
-  let demoEditionOptionId = productOptions.find(
-    (productOption) => productOption.title === "Funnelmetry Demo Edition"
+  let catalogEditionOptionId = productOptions.find(
+    (productOption) => productOption.title === "Funnelmetry Catalog Edition"
   )?.id
 
-  if (!demoEditionOptionId) {
+  if (!catalogEditionOptionId) {
     const { result: createdOptions } = await createProductOptionsWorkflow(
       container
     ).run({
       input: {
         product_options: [
           {
-            title: "Funnelmetry Demo Edition",
+            title: "Funnelmetry Catalog Edition",
             values: ["Standard"],
           },
         ],
       },
     })
-    demoEditionOptionId = createdOptions[0]?.id
+    catalogEditionOptionId = createdOptions[0]?.id
   }
 
-  if (!demoEditionOptionId) {
-    throw new Error("Could not resolve the Funnelmetry demo product option")
-  }
-
-  const { data: categories } = await query.graph({
-    entity: "product_category",
-    fields: ["id", "name"],
-  })
-  const categoryByName = new Map(
-    categories.map((category) => [category.name, category.id])
-  )
-
-  if (!defaultSalesChannel || !shippingProfile) {
-    throw new Error(
-      "Demo catalog seed requires an existing sales channel and shipping profile"
+  if (!catalogEditionOptionId) {
+    throw new MedusaError(
+      MedusaError.Types.UNEXPECTED_STATE,
+      "Could not resolve the Funnelmetry catalog product option"
     )
   }
 
-  const missingCategoryNames = categoryNames.filter(
-    (categoryName) => !categoryByName.has(categoryName)
-  )
-  if (missingCategoryNames.length > 0) {
-    throw new Error(
-      `Demo catalog seed requires categories: ${missingCategoryNames.join(", ")}`
-    )
-  }
-
-  const handles = Array.from(
-    { length: productCount },
-    (_, index) => `${handlePrefix}${String(index + 1).padStart(3, "0")}`
+  const handles = catalogSourceProducts.map(
+    (product) => `${handlePrefix}${product.id}`
   )
   const { data: existingProducts } = await query.graph({
     entity: "product",
@@ -103,37 +136,37 @@ export default async function funnelmetryDemoCatalogSeed({
     existingProducts.map((product) => product.handle)
   )
 
-  const products = handles.flatMap((handle, index) => {
+  const products = catalogSourceProducts.flatMap((sourceProduct) => {
+    const handle = `${handlePrefix}${sourceProduct.id}`
+
     if (existingHandles.has(handle)) {
       return []
     }
 
-    const itemNumber = index + 1
-    const categoryName = categoryNames[index % categoryNames.length]
-    const categoryId = categoryByName.get(categoryName)!
-    const priceInEur = 12 + (index % 10) * 3
+    const imageUrls = sourceProduct.images.length
+      ? sourceProduct.images
+      : [sourceProduct.thumbnail]
+    const priceInEur = Math.round(
+      sourceProduct.price * sourcePriceToEurRate * 100
+    )
 
     return [
       {
-        title: `Funnelmetry Demo ${categoryName.slice(0, -1)} ${String(
-          itemNumber
-        ).padStart(3, "0")}`,
+        title: sourceProduct.title,
         handle,
-        description:
-          "Synthetic catalog item for Funnelmetry integration, dashboard, and workload demonstrations.",
+        description: sourceProduct.description,
         status: ProductStatus.PUBLISHED,
         shipping_profile_id: shippingProfile.id,
-        category_ids: [categoryId],
-        images: [{ url: imageUrl }],
+        images: imageUrls.map((url) => ({ url })),
         sales_channels: [{ id: defaultSalesChannel.id }],
-        options: [{ id: demoEditionOptionId }],
+        options: [{ id: catalogEditionOptionId }],
         variants: [
           {
-            title: "Default",
-            sku: `FUNNELMETRY-DEMO-${String(itemNumber).padStart(3, "0")}`,
+            title: "Standard",
+            sku: `FMC-${String(sourceProduct.id).padStart(3, "0")}`,
             manage_inventory: false,
             options: {
-              "Funnelmetry Demo Edition": "Standard",
+              "Funnelmetry Catalog Edition": "Standard",
             },
             prices: [
               {
@@ -145,19 +178,27 @@ export default async function funnelmetryDemoCatalogSeed({
         ],
         metadata: {
           catalog_origin: "funnelmetry_demo_seed",
-          seed_version: "v1",
+          seed_version: "v2",
+          source_name: catalogSourceName,
+          source_product_id: sourceProduct.id,
+          source_category: sourceProduct.category,
+          source_brand: sourceProduct.brand ?? null,
+          source_price_amount: sourceProduct.price,
+          source_price_currency: "USD",
+          seed_price_currency: "EUR",
+          seed_price_conversion_rate: sourcePriceToEurRate,
         },
       },
     ]
   })
 
   if (products.length === 0) {
-    logger.info("Funnelmetry demo catalog already contains 100 products.")
+    logger.info("Funnelmetry catalog already contains all 100 source products.")
     return
   }
 
   logger.info(
-    `Creating ${products.length} missing Funnelmetry demo catalog products...`
+    `Creating ${products.length} missing products from ${catalogSourceName}...`
   )
   await createProductsWorkflow(container).run({
     input: {
@@ -165,6 +206,6 @@ export default async function funnelmetryDemoCatalogSeed({
     },
   })
   logger.info(
-    `Finished Funnelmetry demo catalog seed: created ${products.length}, skipped ${productCount - products.length}.`
+    `Finished catalog seed: created ${products.length}, skipped ${productCount - products.length}.`
   )
 }

@@ -41,11 +41,11 @@ export default async function funnelmetryDemoCatalogSeed({
     entity: "product_option",
     fields: ["id", "title"],
   })
-  let demoEditionOption = productOptions.find(
+  let demoEditionOptionId = productOptions.find(
     (productOption) => productOption.title === "Funnelmetry Demo Edition"
-  )
+  )?.id
 
-  if (!demoEditionOption) {
+  if (!demoEditionOptionId) {
     const { result: createdOptions } = await createProductOptionsWorkflow(
       container
     ).run({
@@ -58,7 +58,11 @@ export default async function funnelmetryDemoCatalogSeed({
         ],
       },
     })
-    demoEditionOption = createdOptions[0]
+    demoEditionOptionId = createdOptions[0]?.id
+  }
+
+  if (!demoEditionOptionId) {
+    throw new Error("Could not resolve the Funnelmetry demo product option")
   }
 
   const { data: categories } = await query.graph({
@@ -122,7 +126,7 @@ export default async function funnelmetryDemoCatalogSeed({
         category_ids: [categoryId],
         images: [{ url: imageUrl }],
         sales_channels: [{ id: defaultSalesChannel.id }],
-        options: [{ id: demoEditionOption.id }],
+        options: [{ id: demoEditionOptionId }],
         variants: [
           {
             title: "Default",

@@ -18,6 +18,17 @@ services:
       timeout: 5s
       retries: 20
 
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1000"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   backend:
     build:
       context: ..
@@ -30,9 +41,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgres://medusa:medusa@postgres:5432/medusa?sslmode=disable
       REDIS_URL: redis://redis:6379
+      REDIS_PREFIX: "medusa-reference:"
       STORE_CORS: http://localhost:8000
       ADMIN_CORS: http://localhost:9000
       AUTH_CORS: http://localhost:9000
@@ -72,6 +86,7 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
 
 secrets:
   npm_token:

@@ -27,7 +27,7 @@ docker compose --env-file apps/storefront/.env.local -f runtime/docker-compose.y
 docker compose -f runtime/docker-compose.yml ps
 ```
 
-Chờ `postgres` ở trạng thái `healthy`, còn `backend` và `storefront` là `Up`.
+Chờ `postgres` và `redis` ở trạng thái `healthy`, còn `backend` và `storefront` là `Up`.
 Build đầu tiên có thể mất vài phút. Xem log khi một service không lên:
 
 ```powershell

@@ -1,12 +1,18 @@
 # Local runtime
 
-Docker runs PostgreSQL, a compiled Medusa Admin/backend and a compiled Next.js
+Docker runs PostgreSQL, Redis, a compiled Medusa Admin/backend and a compiled Next.js
 storefront. `pnpm` is installed only inside the runtime image; upstream code
 under `apps/` has no Docker or Edge-runtime patch. The backend runs `medusa
 start`, while the storefront is built by `next build` and runs with `next start`;
 the reference environment does not run Vite or Turbopack development servers.
 The backend runs the bundle under `apps/backend/.medusa/server`, which is
 created during the image build.
+
+Redis is private to the Docker network and persisted in the `redis_data` named
+volume. Medusa uses it for server sessions, the Redis event bus and workflow
+engine; it is not exposed through a host port. The `REDIS_URL` and
+`REDIS_PREFIX` environment variables are backend runtime configuration, not
+Storefront build arguments.
 The local Compose profile explicitly permits an insecure session cookie for
 `http://localhost`; deployments must omit that override and use HTTPS.
 

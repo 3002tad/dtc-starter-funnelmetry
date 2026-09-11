@@ -3,7 +3,10 @@ import {
   ContainerRegistrationKeys,
   ProductStatus,
 } from "@medusajs/framework/utils"
-import { createProductsWorkflow } from "@medusajs/medusa/core-flows"
+import {
+  createProductOptionsWorkflow,
+  createProductsWorkflow,
+} from "@medusajs/medusa/core-flows"
 
 const productCount = 100
 const handlePrefix = "funnelmetry-demo-"
@@ -33,6 +36,30 @@ export default async function funnelmetryDemoCatalogSeed({
     fields: ["id", "name"],
   })
   const shippingProfile = shippingProfiles[0]
+
+  const { data: productOptions } = await query.graph({
+    entity: "product_option",
+    fields: ["id", "title"],
+  })
+  let demoEditionOption = productOptions.find(
+    (productOption) => productOption.title === "Funnelmetry Demo Edition"
+  )
+
+  if (!demoEditionOption) {
+    const { result: createdOptions } = await createProductOptionsWorkflow(
+      container
+    ).run({
+      input: {
+        product_options: [
+          {
+            title: "Funnelmetry Demo Edition",
+            values: ["Standard"],
+          },
+        ],
+      },
+    })
+    demoEditionOption = createdOptions[0]
+  }
 
   const { data: categories } = await query.graph({
     entity: "product_category",
@@ -95,11 +122,15 @@ export default async function funnelmetryDemoCatalogSeed({
         category_ids: [categoryId],
         images: [{ url: imageUrl }],
         sales_channels: [{ id: defaultSalesChannel.id }],
+        options: [{ id: demoEditionOption.id }],
         variants: [
           {
             title: "Default",
             sku: `FUNNELMETRY-DEMO-${String(itemNumber).padStart(3, "0")}`,
             manage_inventory: false,
+            options: {
+              "Funnelmetry Demo Edition": "Standard",
+            },
             prices: [
               {
                 amount: priceInEur,

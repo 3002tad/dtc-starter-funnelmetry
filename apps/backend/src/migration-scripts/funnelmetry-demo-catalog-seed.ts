@@ -7,6 +7,7 @@ import {
 import {
   createProductOptionsWorkflow,
   createProductsWorkflow,
+  updateProductVariantsWorkflow,
 } from "@medusajs/medusa/core-flows"
 
 const productCount = 100
@@ -30,6 +31,9 @@ type CatalogSourceProduct = {
 type CatalogSourceResponse = {
   products: CatalogSourceProduct[]
 }
+
+const priceInEur = (sourcePrice: number) =>
+  Number((sourcePrice * sourcePriceToEurRate).toFixed(2))
 
 async function loadCatalogSource(): Promise<CatalogSourceProduct[]> {
   const response = await fetch(catalogSourceUrl)
@@ -127,7 +131,7 @@ export default async function funnelmetryDemoCatalogSeed({
   )
   const { data: existingProducts } = await query.graph({
     entity: "product",
-    fields: ["handle"],
+    fields: ["handle", "variants.id"],
     filters: {
       handle: handles,
     },
@@ -135,6 +139,41 @@ export default async function funnelmetryDemoCatalogSeed({
   const existingHandles = new Set(
     existingProducts.map((product) => product.handle)
   )
+
+  const sourceProductByHandle = new Map(
+    catalogSourceProducts.map((product) => [
+      `${handlePrefix}${product.id}`,
+      product,
+    ])
+  )
+  const existingVariantUpdates = existingProducts.flatMap((product) => {
+    const sourceProduct = sourceProductByHandle.get(product.handle)
+
+    if (!sourceProduct) {
+      return []
+    }
+
+    return (product.variants ?? []).map((variant) => ({
+      id: variant.id,
+      prices: [
+        {
+          amount: priceInEur(sourceProduct.price),
+          currency_code: "eur",
+        },
+      ],
+    }))
+  })
+
+  if (existingVariantUpdates.length > 0) {
+    logger.info(
+      `Updating prices for ${existingVariantUpdates.length} existing catalog variants...`
+    )
+    await updateProductVariantsWorkflow(container).run({
+      input: {
+        product_variants: existingVariantUpdates,
+      },
+    })
+  }
 
   const products = catalogSourceProducts.flatMap((sourceProduct) => {
     const handle = `${handlePrefix}${sourceProduct.id}`
@@ -146,10 +185,6 @@ export default async function funnelmetryDemoCatalogSeed({
     const imageUrls = sourceProduct.images.length
       ? sourceProduct.images
       : [sourceProduct.thumbnail]
-    const priceInEur = Math.round(
-      sourceProduct.price * sourcePriceToEurRate * 100
-    )
-
     return [
       {
         title: sourceProduct.title,
@@ -170,7 +205,7 @@ export default async function funnelmetryDemoCatalogSeed({
             },
             prices: [
               {
-                amount: priceInEur,
+                amount: priceInEur(sourceProduct.price),
                 currency_code: "eur",
               },
             ],

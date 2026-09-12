@@ -4,7 +4,7 @@ import { useEffect } from "react"
 import { createBrowserSdk } from "@3002tad/funnelmetry-browser-sdk"
 
 const sourceId = "medusa-reference"
-const sourceKeyId = "medusa-reference-dev"
+const sourceKeyId = "medusa-reference-relay"
 const allowedEventTypes = ["behavior.product_viewed","cart.add_clicked","checkout.started"]
 const reliability = {"failureMode":"fail_open","timeoutMs":800,"maxQueueSize":200,"retry":{"maxAttempts":3},"circuitBreaker":{"failureThreshold":3,"cooldownMs":30000}}
 
@@ -21,7 +21,7 @@ function getSdk(): BrowserSdk | null {
     sdk = createBrowserSdk({
       sourceId,
       sourceKeyId,
-      endpoint: "http://localhost:31000/v1/ingress/events",
+      endpoint: "https://ingest-test.entidi.io.vn/v1/ingress/events",
       writeKey: process.env.NEXT_PUBLIC_FUNNELMETRY_BROWSER_WRITE_KEY ?? "",
       allowedEventTypes,
       maxAttempts: reliability.retry.maxAttempts,

@@ -123,7 +123,7 @@ export default async function ProductPage(props: Props) {
 
   return (
     <>
-      <FunnelmetryProductViewed productId={pricedProduct.id} />
+      <FunnelmetryProductViewed productId={pricedProduct.id} variantId={selectedVariantId} />
       <ProductTemplate
       product={pricedProduct}
       region={region}

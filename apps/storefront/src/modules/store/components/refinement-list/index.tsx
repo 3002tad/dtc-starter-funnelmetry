@@ -7,6 +7,7 @@ import {
   OPTION_VALUE_QUERY_KEY,
   parseOptionValueIds,
 } from "@lib/util/product-option-filters"
+import { trackFilterApplied } from "@funnelmetry/client"
 import OptionsPicker from "./options-picker"
 import SortProducts, { SortOptions } from "./sort-products"
 
@@ -55,13 +56,18 @@ const RefinementList = ({
     [searchParams]
   )
 
-  const setOptionValueIds = (valueIds: string[]) =>
+  const setOptionValueIds = (valueIds: string[]) => {
+    void trackFilterApplied({
+      filterKeys: valueIds.length > 0 ? ["product_option"] : [],
+      activeFilterCount: valueIds.length,
+    })
     updateQueryParams((params) => {
       params.delete(OPTION_VALUE_QUERY_KEY)
       valueIds.forEach((valueId) =>
         params.append(OPTION_VALUE_QUERY_KEY, valueId)
       )
     })
+  }
 
   return (
     <div className="flex flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem]">

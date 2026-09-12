@@ -1,4 +1,11 @@
 # syntax=docker/dockerfile:1.7
+FROM node:22-bookworm-slim AS api-bot-runtime
+
+WORKDIR /app
+COPY --chown=node:node tools/funnelmetry-api-bot.mjs tools/funnelmetry-api-bot.mjs
+USER node
+ENTRYPOINT ["node", "tools/funnelmetry-api-bot.mjs"]
+
 FROM node:22-bookworm-slim AS dependencies
 
 RUN corepack enable && corepack prepare pnpm@10.11.1 --activate

@@ -45,3 +45,8 @@ set its publishable key from Medusa Admin. The storefront is available at
 The Compose volume is retained when services stop, so seed data survives. Use
 `docker compose -f runtime/docker-compose.yml down -v` only for an intentional
 local database reset.
+
+The Funnelmetry API bot is a one-shot container in the optional
+`funnelmetry-test` Compose profile. It is not part of the long-running Medusa
+runtime. See [`../docs/RUN_FUNNELMETRY_API_BOT.md`](../docs/RUN_FUNNELMETRY_API_BOT.md)
+for the build command, required public credentials and full source-funnel test.

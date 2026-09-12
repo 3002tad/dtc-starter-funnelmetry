@@ -84,6 +84,31 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
 
+  # One-shot QA job. It is excluded from the normal Medusa runtime and starts
+  # only through the `funnelmetry-test` profile with `docker compose run`.
+  funnelmetry-api-bot:
+    profiles: ["funnelmetry-test"]
+    build:
+      context: ..
+      dockerfile: runtime/Dockerfile
+      target: api-bot-runtime
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      FUNNELMETRY_BOT_MODE: ${FUNNELMETRY_BOT_MODE:-full}
+      FUNNELMETRY_RELAY_URL: ${FUNNELMETRY_RELAY_URL:-https://ingest-test.entidi.io.vn/v1/ingress/events}
+      FUNNELMETRY_SOURCE_ID: ${FUNNELMETRY_SOURCE_ID:-medusa-reference}
+      FUNNELMETRY_SOURCE_KEY_ID: ${FUNNELMETRY_SOURCE_KEY_ID:-medusa-reference-relay}
+      FUNNELMETRY_BROWSER_WRITE_KEY: ${NEXT_PUBLIC_FUNNELMETRY_BROWSER_WRITE_KEY:-}
+      FUNNELMETRY_PRODUCT_IDS: ${FUNNELMETRY_PRODUCT_IDS:-}
+      FUNNELMETRY_BOT_JOURNEYS: ${FUNNELMETRY_BOT_JOURNEYS:-10}
+      FUNNELMETRY_BOT_CONCURRENCY: ${FUNNELMETRY_BOT_CONCURRENCY:-2}
+      FUNNELMETRY_BOT_STEP_DELAY_MS: ${FUNNELMETRY_BOT_STEP_DELAY_MS:-50}
+      MEDUSA_BACKEND_URL: http://backend:9000
+      MEDUSA_PUBLISHABLE_KEY: ${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY:-}
+      MEDUSA_COUNTRY_CODE: ${MEDUSA_COUNTRY_CODE:-gb}
+
 volumes:
   postgres_data:
   redis_data:

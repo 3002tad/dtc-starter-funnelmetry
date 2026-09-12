@@ -104,7 +104,10 @@ jobs:
         working-directory: medusa
         env:
           TARGET_REF: ${{ github.ref_name }}
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITHUB_TOKEN is preferred when package Actions access is available.
+          # A repository secret provides a least-privilege fallback for private
+          # packages whose access cannot be delegated to this host repository.
+          NODE_AUTH_TOKEN: ${{ secrets.FUNNELMETRY_PACKAGE_READ_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           git apply --index --allow-empty "$RUNNER_TEMP/funnelmetry-plan/integration.patch"
           pnpm install --lockfile-only

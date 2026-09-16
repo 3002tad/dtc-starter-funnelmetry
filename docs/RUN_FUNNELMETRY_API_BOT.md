@@ -1,38 +1,42 @@
-# Chạy Funnelmetry API Bot trên Ubuntu
+# Chạy Funnelmetry API Bot trên Source host
 
 ## Mục đích
 
-Bot phát nhanh journey hoàn chỉnh ở phía source mà không cần mở trình duyệt hoặc chờ Laptop 2 chạy Pipeline:
+Bot tạo journey nhanh ở phía Source mà không cần trình duyệt hoặc Pipeline đang
+online:
 
 ```text
-Relay transport smoke: behavior.product_viewed → cart.add_clicked → checkout.started
+Source Ingress smoke: behavior.product_viewed → cart.add_clicked → checkout.started
 Medusa: create cart → add real variant → address → shipping → payment → complete cart
-Backend subscriber: order.placed → medusa.order_placed
+Backend subscriber: order.placed → medusa.order_placed → Source Ingress
 ```
 
-Các behavior event dùng cùng `anonymous_id`, `session_id` và `correlation_id`, tuân theo `IngressEvent v1`. Bot chọn product variant thật từ catalog rồi dùng Store API chính thức của Medusa để tạo đơn. Vì vậy `medusa.order_placed` được native subscriber phát từ đơn thật; bot không tự dựng business event.
+Behavior event dùng cùng `anonymous_id`, `session_id` và `correlation_id`, tuân
+theo `IngressEvent v1`. Full mode tạo order bằng Store API của Medusa, vì vậy
+business fact vẫn do native `order.placed` subscriber phát; bot không tự dựng
+`medusa.order_placed`.
 
-> Catalog DEC-073 đã mở rộng behavior coverage sang page view, scroll milestone,
-> banner impression/click, search và filter. Phiên bản bot hiện tại vẫn chỉ là transport smoke;
-> chưa được dùng để claim full behavior coverage. Kế hoạch đồng bộ nằm tại
-> `System_Backbone/docs/implementation/BEHAVIOR_EVENT_CATALOG_V1_ROLLOUT.md`.
-
-`relay_queued` chỉ chứng minh Relay đã lưu behavior event bền vững. Khi Laptop 2 chưa kết nối, behavior event tiếp tục nằm trong spool của Relay; đây chưa phải receipt `accepted` từ Pipeline. Tương tự, việc tạo được order chứng minh native `order.placed` đã được kích hoạt ở Medusa, nhưng chưa chứng minh Pipeline đã nhận business event. Báo cáo đánh dấu phần này là `deferred_until_pipeline_private_ingress_is_available`.
+Bot chỉ chứng minh **Source durable acceptance**: mỗi receipt có
+`accepted|duplicate`, `event_feed_id` từ readiness và `ingress_seq`. Nó không
+chứng minh Pipeline đã pull, Kafka đã durable-publish hay canonical analytics
+đã cập nhật. Những bước đó thuộc acceptance của Pipeline Source Connector.
 
 ## Chạy bằng container trên server
 
-Bot là one-shot container thuộc Compose profile `funnelmetry-test`; nó không chạy cùng runtime thông thường và tự bị xoá sau mỗi lượt test. Container gọi Medusa qua Docker network bằng `http://backend:9000`, còn behavior event đi qua public Relay để kiểm tra đúng đường Cloudflare đang triển khai.
+Bot thuộc Compose profile `funnelmetry-test`, là one-shot container và tự bị
+xóa sau mỗi lượt. Container gọi Medusa qua `http://backend:9000`, behavior
+event đi qua public Source Ingress/Cloudflare theo đúng đường browser reference.
 
-File `runtime/server.env` hiện dùng để build storefront phải có hai public credential sau:
+`runtime/server.env` phải có các credential/configuration cần thiết nhưng không
+được in giá trị thật:
 
 ```bash
 cd /home/ntd/dtc-starter-funnelmetry
-
-grep -E '^(NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY|NEXT_PUBLIC_FUNNELMETRY_BROWSER_WRITE_KEY)=' runtime/server.env \
+grep -E '^(NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY|NEXT_PUBLIC_FUNNELMETRY_BROWSER_WRITE_KEY|FUNNELMETRY_SOURCE_INGRESS_URL)=' runtime/server.env \
   | sed 's/=.*/=<configured>/'
 ```
 
-Không in giá trị thật của write key vào log. Build image bot không cần GitHub Packages token vì image chỉ copy script Node thuần:
+Build bot:
 
 ```bash
 docker compose --env-file runtime/server.env \
@@ -41,7 +45,7 @@ docker compose --env-file runtime/server.env \
   build funnelmetry-api-bot
 ```
 
-Chạy 10 journey hoàn chỉnh rồi tự xoá container:
+Chạy 10 journey đầy đủ:
 
 ```bash
 docker compose --env-file runtime/server.env \
@@ -51,18 +55,10 @@ docker compose --env-file runtime/server.env \
   --mode full --journeys 10 --concurrency 2 --step-delay-ms 20
 ```
 
-`--no-deps` giữ nguyên các container Medusa đang chạy và không recreate backend. Bot mặc định tự chọn product variant thật. Nếu muốn giới hạn product được sử dụng, truyền product ID hoặc handle:
+`--no-deps` không recreate Medusa. Nếu cần giới hạn product, truyền product ID
+hoặc handle bằng `--product-ids`.
 
-```bash
-docker compose --env-file runtime/server.env \
-  -f runtime/docker-compose.yml \
-  --profile funnelmetry-test \
-  run --rm --no-deps funnelmetry-api-bot \
-  --mode full --journeys 10 --concurrency 2 \
-  --product-ids "prod_01,medusa-sweatshirt"
-```
-
-Chỉ kiểm tra Relay và không tạo order thật:
+Chỉ kiểm tra Source Ingress behavior, không tạo order:
 
 ```bash
 docker compose --env-file runtime/server.env \
@@ -72,22 +68,18 @@ docker compose --env-file runtime/server.env \
   --mode behavior --journeys 100 --concurrency 10
 ```
 
-Trong mode `behavior`, nếu không có `--product-ids`, bot dùng ID tổng hợp `api-bot-product-1`. Mọi behavior event do bot tạo đều có `source_metadata.synthetic=true` để không lẫn với traffic người dùng thật.
+Trong mode `behavior`, event có `source_metadata.synthetic=true` để không lẫn
+với traffic thật.
 
 ## Đọc kết quả
 
-Kết quả cuối gồm số journey thành công/thất bại, tổng event được Relay queue, số Medusa order thực sự được tạo, retry, throughput và latency p50/p95/max. Trong trạng thái hiện tại, `upstream_state_at_start` có thể là `waiting_for_upstream`; đây là trạng thái mong đợi khi Laptop 2 chưa sẵn sàng.
+Summary trả số journey, `events_source_accepted`, event feed lineage tại thời
+điểm bắt đầu, số Medusa order, retry, throughput và latency. Thành công ở đây
+không cho phép claim end-to-end analytics; Pipeline phải pull `/v1/events` với
+Bearer credential riêng và chứng minh Kafka/canonical downstream theo contract.
 
-Muốn xem từng receipt:
-
-```bash
-node tools/funnelmetry-api-bot.mjs --journeys 3 --concurrency 1 --verbose
-```
-
-Chạy test cục bộ của bot, không cần Relay thật:
+Chạy unit test local không cần server:
 
 ```bash
 node --test tools/funnelmetry-api-bot.test.mjs
 ```
-
-Lệnh Node trực tiếp chỉ dành cho phát triển. Luồng demo/triển khai chuẩn trên Ubuntu dùng container ở trên, nên host không cần cài Node hoặc pnpm.

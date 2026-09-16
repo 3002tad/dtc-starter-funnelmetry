@@ -9,7 +9,7 @@ type Logger = { warn: (message: string) => void }
 type MedusaContainer = SubscriberArgs<OrderPlacedData>["container"]
 
 const sourceId = "medusa-reference"
-const sourceKeyId = "medusa-reference-relay"
+const sourceKeyId = "medusa-reference-source"
 const reliability = {"failureMode":"fail_open","timeoutMs":800,"maxQueueSize":200,"retry":{"maxAttempts":3},"circuitBreaker":{"failureThreshold":3,"cooldownMs":30000}}
 let dispatcher: ReturnType<typeof createManagedDeliveryDispatcher> | undefined
 let lastInactiveWarningAt = 0
@@ -27,7 +27,7 @@ function getDispatcher(logger: Logger) {
   dispatcher = createManagedDeliveryDispatcher({
     sourceId,
     sourceKeyId,
-    endpoint: "http://host.docker.internal:31000/v1/ingress/events",
+    endpoint: process.env.FUNNELMETRY_INGEST_URL ?? "http://host.docker.internal:32000/v1/ingress/events",
     signingKey,
     timeoutMs: reliability.timeoutMs,
     maxAttempts: reliability.retry.maxAttempts,

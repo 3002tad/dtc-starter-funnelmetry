@@ -31,9 +31,9 @@ test("does not accept the write key as a command-line argument", () => {
 
 test("accepts the private Docker hostname for the Medusa backend", () => {
   const options = parseOptions([], {
-    FUNNELMETRY_RELAY_URL: "https://relay.example.test/v1/ingress/events",
+    FUNNELMETRY_SOURCE_INGRESS_URL: "https://source-ingress.example.test/v1/ingress/events",
     FUNNELMETRY_SOURCE_ID: "medusa-reference",
-    FUNNELMETRY_SOURCE_KEY_ID: "medusa-reference-relay",
+    FUNNELMETRY_SOURCE_KEY_ID: "medusa-reference-source",
     FUNNELMETRY_BROWSER_WRITE_KEY: "test-write-key",
     MEDUSA_BACKEND_URL: "http://backend:9000",
     MEDUSA_PUBLISHABLE_KEY: "pk_test",
@@ -41,12 +41,12 @@ test("accepts the private Docker hostname for the Medusa backend", () => {
   assert.equal(options.medusaUrl, "http://backend:9000")
 })
 
-test("queues complete journeys through an HTTP relay", async (context) => {
+test("durably accepts complete journeys through Source Ingress", async (context) => {
   const received = []
   const server = createServer(async (request, response) => {
     if (request.url === "/readyz") {
       response.writeHead(200, { "content-type": "application/json" })
-      response.end(JSON.stringify({ status: "ready", upstream: "waiting_for_upstream" }))
+      response.end(JSON.stringify({ status: "ready", event_feed_id: "feed_bot_test" }))
       return
     }
 
@@ -56,12 +56,11 @@ test("queues complete journeys through an HTTP relay", async (context) => {
     received.push({ event, headers: request.headers })
     response.writeHead(202, { "content-type": "application/json" })
     response.end(JSON.stringify({
-      specversion: "relay-receipt.v1",
-      status: "relay_queued",
-      relay_id: `relay-${received.length}`,
+      status: "accepted",
       source_id: event.source_id,
       event_id: event.event_id,
-      relay_received_at: new Date().toISOString(),
+      ingress_seq: received.length,
+      accepted_at: new Date().toISOString(),
     }))
   })
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve))
@@ -69,9 +68,9 @@ test("queues complete journeys through an HTTP relay", async (context) => {
 
   const address = server.address()
   const summary = await runBot({
-    relayUrl: `http://127.0.0.1:${address.port}/v1/ingress/events`,
+    sourceIngressUrl: `http://127.0.0.1:${address.port}/v1/ingress/events`,
     sourceId: "medusa-reference",
-    sourceKeyId: "medusa-reference-relay",
+    sourceKeyId: "medusa-reference-source",
     writeKey: "test-write-key",
     productIds: ["prod_1", "prod_2"],
     journeys: 2,
@@ -83,7 +82,7 @@ test("queues complete journeys through an HTTP relay", async (context) => {
   }, { log: () => {}, errorLog: () => {} })
 
   assert.equal(summary.journeys_succeeded, 2)
-  assert.equal(summary.events_relay_queued, 6)
+  assert.equal(summary.events_source_accepted, 6)
   assert.equal(received.length, 6)
   assert.ok(received.every(({ headers }) => headers["x-funnelmetry-write-key"] === "test-write-key"))
 })
@@ -102,7 +101,7 @@ test("creates a real Medusa order in full mode instead of fabricating a business
       response.writeHead(status, { "content-type": "application/json" })
       response.end(JSON.stringify(payload))
     }
-    if (url.pathname === "/readyz") return send(200, { status: "ready", upstream: "waiting_for_upstream" })
+    if (url.pathname === "/readyz") return send(200, { status: "ready", event_feed_id: "feed_bot_test" })
     if (url.pathname === "/store/regions") {
       return send(200, { regions: [{ id: "reg_test", countries: [{ iso_2: "gb" }] }] })
     }
@@ -117,12 +116,11 @@ test("creates a real Medusa order in full mode instead of fabricating a business
     }
     if (url.pathname === "/v1/ingress/events") {
       return send(202, {
-        specversion: "relay-receipt.v1",
-        status: "relay_queued",
-        relay_id: `relay-${requests.length}`,
+        status: "accepted",
         source_id: body.source_id,
         event_id: body.event_id,
-        relay_received_at: new Date().toISOString(),
+        ingress_seq: requests.filter(({ path }) => path === "/v1/ingress/events").length,
+        accepted_at: new Date().toISOString(),
       })
     }
     if (url.pathname === "/store/shipping-options") {
@@ -144,12 +142,12 @@ test("creates a real Medusa order in full mode instead of fabricating a business
 
   const summary = await runBot({
     mode: "full",
-    relayUrl: `${baseUrl}/v1/ingress/events`,
+    sourceIngressUrl: `${baseUrl}/v1/ingress/events`,
     medusaUrl: baseUrl,
     medusaPublishableKey: "pk_test",
     countryCode: "gb",
     sourceId: "medusa-reference",
-    sourceKeyId: "medusa-reference-relay",
+    sourceKeyId: "medusa-reference-source",
     writeKey: "test-write-key",
     productIds: ["api-bot-product-1"],
     journeys: 1,
@@ -160,7 +158,7 @@ test("creates a real Medusa order in full mode instead of fabricating a business
     verbose: false,
   }, { log: () => {}, errorLog: () => {} })
 
-  assert.equal(summary.events_relay_queued, 3)
+  assert.equal(summary.events_source_accepted, 3)
   assert.equal(summary.medusa_orders_created, 1)
   assert.equal(summary.expected_native_business_event, "medusa.order_placed")
   assert.ok(requests.some(({ path }) => path === "/store/carts/cart_test/complete"))

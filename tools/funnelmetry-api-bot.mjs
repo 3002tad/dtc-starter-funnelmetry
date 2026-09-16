@@ -36,7 +36,7 @@ export function parseOptions(argv, env = process.env) {
     "request-timeout-ms",
     "max-attempts",
     "product-ids",
-    "relay-url",
+    "source-ingress-url",
     "medusa-url",
     "source-id",
     "source-key-id",
@@ -64,7 +64,7 @@ export function parseOptions(argv, env = process.env) {
     index += 1
   }
 
-  const relayUrl = values.get("relay-url") ?? env.FUNNELMETRY_RELAY_URL
+  const sourceIngressUrl = values.get("source-ingress-url") ?? env.FUNNELMETRY_SOURCE_INGRESS_URL
   const sourceId = values.get("source-id") ?? env.FUNNELMETRY_SOURCE_ID
   const sourceKeyId = values.get("source-key-id") ?? env.FUNNELMETRY_SOURCE_KEY_ID
   const writeKey = env.FUNNELMETRY_BROWSER_WRITE_KEY
@@ -77,7 +77,7 @@ export function parseOptions(argv, env = process.env) {
   if (!["full", "behavior"].includes(mode)) throw new Error("mode must be full or behavior")
 
   if (!help) {
-    if (!relayUrl) throw new Error("FUNNELMETRY_RELAY_URL is required")
+    if (!sourceIngressUrl) throw new Error("FUNNELMETRY_SOURCE_INGRESS_URL is required")
     if (!sourceId) throw new Error("FUNNELMETRY_SOURCE_ID is required")
     if (!sourceKeyId) throw new Error("FUNNELMETRY_SOURCE_KEY_ID is required")
     if (!writeKey) throw new Error("FUNNELMETRY_BROWSER_WRITE_KEY is required")
@@ -94,7 +94,7 @@ export function parseOptions(argv, env = process.env) {
     help,
     mode,
     verbose,
-    relayUrl: relayUrl ? normalizeRelayUrl(relayUrl) : undefined,
+    sourceIngressUrl: sourceIngressUrl ? normalizeSourceIngressUrl(sourceIngressUrl) : undefined,
     sourceId,
     sourceKeyId,
     writeKey,
@@ -119,10 +119,10 @@ function normalizeBaseUrl(value, label) {
   return url.toString().replace(/\/$/, "")
 }
 
-function normalizeRelayUrl(value) {
+function normalizeSourceIngressUrl(value) {
   const url = new URL(value)
   if (url.protocol !== "https:" && !["localhost", "127.0.0.1"].includes(url.hostname)) {
-    throw new Error("Relay URL must use HTTPS unless it targets localhost")
+    throw new Error("Source Ingress URL must use HTTPS unless it targets localhost")
   }
   url.pathname = "/v1/ingress/events"
   url.search = ""
@@ -190,7 +190,7 @@ async function postEvent(event, options, fetchImpl) {
 
   for (let attempt = 1; attempt <= options.maxAttempts; attempt += 1) {
     try {
-      const response = await fetchImpl(options.relayUrl, {
+      const response = await fetchImpl(options.sourceIngressUrl, {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -201,19 +201,20 @@ async function postEvent(event, options, fetchImpl) {
         signal: AbortSignal.timeout(options.requestTimeoutMs),
       })
       const receipt = await parseResponse(response)
-      if (response.status === 202 && receipt.status === "relay_queued") {
+      if ((response.status === 202 || response.status === 200) && (receipt.status === "accepted" || receipt.status === "duplicate")) {
         if (receipt.source_id !== event.source_id || receipt.event_id !== event.event_id) {
-          throw new Error("Relay receipt identity does not match the submitted event")
+          throw new Error("Source acceptance receipt identity does not match the submitted event")
         }
+        if (!Number.isSafeInteger(receipt.ingress_seq) || receipt.ingress_seq <= 0) throw new Error("Source acceptance receipt lacks ingress_seq")
         return { receipt, latencyMs: performance.now() - startedAt, attempts: attempt }
       }
 
-      const error = new Error(`Relay returned ${response.status}: ${JSON.stringify(receipt)}`)
+      const error = new Error(`Source Ingress returned ${response.status}: ${JSON.stringify(receipt)}`)
       if (response.status < 500 && response.status !== 429) throw error
       lastError = error
     } catch (error) {
       lastError = error
-      if (error.message?.startsWith("Relay returned 4") && !error.message.startsWith("Relay returned 429")) {
+      if (error.message?.startsWith("Source Ingress returned 4") && !error.message.startsWith("Source Ingress returned 429")) {
         throw error
       }
     }
@@ -221,7 +222,7 @@ async function postEvent(event, options, fetchImpl) {
     if (attempt < options.maxAttempts) await sleep(Math.min(250 * 2 ** (attempt - 1), 2_000))
   }
 
-  throw lastError ?? new Error("Relay request failed")
+  throw lastError ?? new Error("Source Ingress request failed")
 }
 
 function percentile(values, ratio) {
@@ -230,12 +231,12 @@ function percentile(values, ratio) {
   return sorted[Math.min(Math.ceil(sorted.length * ratio) - 1, sorted.length - 1)]
 }
 
-async function relayReadiness(relayUrl, fetchImpl, timeoutMs) {
-  const url = new URL(relayUrl)
+async function sourceIngressReadiness(sourceIngressUrl, fetchImpl, timeoutMs) {
+  const url = new URL(sourceIngressUrl)
   url.pathname = "/readyz"
   const response = await fetchImpl(url, { signal: AbortSignal.timeout(timeoutMs) })
   const body = await parseResponse(response)
-  if (!response.ok) throw new Error(`Relay readiness failed (${response.status}): ${JSON.stringify(body)}`)
+  if (!response.ok) throw new Error(`Source Ingress readiness failed (${response.status}): ${JSON.stringify(body)}`)
   return body
 }
 
@@ -368,8 +369,8 @@ async function completeCheckout(options, fetchImpl, { cartId, region, paymentPro
 }
 
 export async function runBot(options, { fetchImpl = fetch, log = console.log, errorLog = console.error } = {}) {
-  const readiness = await relayReadiness(options.relayUrl, fetchImpl, options.requestTimeoutMs)
-  log(`[funnelmetry-api-bot] relay ready; upstream=${readiness.upstream ?? "unknown"}`)
+  const readiness = await sourceIngressReadiness(options.sourceIngressUrl, fetchImpl, options.requestTimeoutMs)
+  log(`[funnelmetry-api-bot] source ingress ready; event_feed_id=${readiness.event_feed_id ?? "unknown"}`)
   const fullMode = options.mode === "full"
   const commerce = fullMode ? await loadCommerceFixture(options, fetchImpl) : undefined
   if (commerce) {
@@ -437,17 +438,17 @@ export async function runBot(options, { fetchImpl = fetch, log = console.log, er
 
   const durationMs = Date.now() - startedAt
   const summary = {
-    mode: fullMode ? "medusa_api_plus_relay_behavior" : "relay_behavior_input",
+    mode: fullMode ? "medusa_api_plus_source_ingress_behavior" : "source_ingress_behavior_input",
     source_id: options.sourceId,
-    relay_url: options.relayUrl,
-    upstream_state_at_start: readiness.upstream ?? "unknown",
+    source_ingress_url: options.sourceIngressUrl,
+    event_feed_id_at_start: readiness.event_feed_id ?? "unknown",
     journeys_requested: options.journeys,
     journeys_succeeded: options.journeys - failures.length,
     journeys_failed: failures.length,
-    events_relay_queued: eventCount,
+    events_source_accepted: eventCount,
     medusa_orders_created: orderCount,
     expected_native_business_event: fullMode ? "medusa.order_placed" : null,
-    business_delivery_verification: fullMode ? "deferred_until_pipeline_private_ingress_is_available" : "not_applicable",
+    business_delivery_verification: fullMode ? "source_acceptance_only_pipeline_pull_evidence_pending" : "not_applicable",
     request_retries: retryCount,
     duration_ms: durationMs,
     throughput_events_per_second: durationMs === 0 ? eventCount : Number((eventCount / (durationMs / 1_000)).toFixed(2)),
@@ -466,7 +467,7 @@ function usage() {
   return `Usage: pnpm funnelmetry:api-bot -- [options]
 
 Required environment variables:
-  FUNNELMETRY_RELAY_URL
+  FUNNELMETRY_SOURCE_INGRESS_URL
   FUNNELMETRY_SOURCE_ID
   FUNNELMETRY_SOURCE_KEY_ID
   FUNNELMETRY_BROWSER_WRITE_KEY
@@ -483,7 +484,7 @@ Options:
   --product-ids <id,id,...>     Default: api-bot-product-1
   --medusa-url <url>            Overrides MEDUSA_BACKEND_URL
   --country-code <code>         Default: gb
-  --relay-url <url>             Overrides FUNNELMETRY_RELAY_URL
+  --source-ingress-url <url>    Overrides FUNNELMETRY_SOURCE_INGRESS_URL
   --source-id <id>              Overrides FUNNELMETRY_SOURCE_ID
   --source-key-id <id>          Overrides FUNNELMETRY_SOURCE_KEY_ID
   --verbose

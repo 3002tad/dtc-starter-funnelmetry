@@ -12,10 +12,10 @@ source:
 
 ingest:
   browser_url: https://ingest-test.entidi.io.vn/v1/ingress/events
-  backend_url: http://host.docker.internal:31000/v1/ingress/events
+  backend_url: http://host.docker.internal:32000/v1/ingress/events
 
 auth:
-  source_key_id: medusa-reference-relay
+  source_key_id: medusa-reference-source
   browser_write_key_ref: FUNNELMETRY_BROWSER_WRITE_KEY
   backend_signing_key_ref: FUNNELMETRY_BACKEND_SIGNING_KEY
 

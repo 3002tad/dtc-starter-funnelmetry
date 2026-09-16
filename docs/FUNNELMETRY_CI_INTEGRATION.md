@@ -53,9 +53,11 @@ after the manifest's `reliability.circuit_breaker.failure_threshold`. Thus an un
 Pipeline, full queue, invalid integration credential, or exhausted retry cannot fail,
 retry, or delay the checkout/order business operation.
 
-This is not an outbox or a durable source queue: an event that is dropped because the
-queue is full, exhausts retry, or is present during a host restart has not crossed the
-durable handoff boundary. The dispatcher emits controlled warning telemetry and its
+This is not an outbox: an event that is dropped because the queue is full, exhausts
+retry, or is present during a host restart has not crossed the durable **Source
+Ingress** acceptance boundary. A successful `accepted|duplicate` receipt means the
+Source Event Log owns the record; it does not mean a Pipeline has pulled it or Kafka
+has acknowledged it. The dispatcher emits controlled warning telemetry and its
 metrics distinguish accepted, duplicate, rejected, retry-exhausted, queue-full, and
 circuit-open outcomes. Reconciliation is still required to quantify the pre-handoff gap.
 

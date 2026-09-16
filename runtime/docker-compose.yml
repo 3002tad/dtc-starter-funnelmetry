@@ -53,8 +53,12 @@ services:
       JWT_SECRET: local-development-only-jwt-secret
       COOKIE_SECRET: local-development-only-cookie-secret
       MEDUSA_COOKIE_SECURE: "false"
+      FUNNELMETRY_INGEST_URL: ${FUNNELMETRY_INGEST_URL:-http://host.docker.internal:32000/v1/ingress/events}
+      FUNNELMETRY_BACKEND_SIGNING_KEY: ${FUNNELMETRY_BACKEND_SIGNING_KEY:-}
     ports:
       - "127.0.0.1:9000:9000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   storefront:
     build:
@@ -66,6 +70,7 @@ services:
         NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY:-}
         NEXT_PUBLIC_DEFAULT_REGION: ${NEXT_PUBLIC_DEFAULT_REGION:-dk}
         NEXT_PUBLIC_FUNNELMETRY_BROWSER_WRITE_KEY: ${NEXT_PUBLIC_FUNNELMETRY_BROWSER_WRITE_KEY:-}
+        NEXT_PUBLIC_FUNNELMETRY_INGEST_URL: ${NEXT_PUBLIC_FUNNELMETRY_INGEST_URL:-https://ingest-test.entidi.io.vn/v1/ingress/events}
       secrets:
         - npm_token
     command: sh -c "cd apps/storefront && ./node_modules/.bin/next start -p 8000"
@@ -75,6 +80,7 @@ services:
     environment:
       NEXT_PUBLIC_MEDUSA_BACKEND_URL: ${NEXT_PUBLIC_MEDUSA_BACKEND_URL:-http://api.localhost:9000}
       NEXT_PUBLIC_DEFAULT_REGION: ${NEXT_PUBLIC_DEFAULT_REGION:-dk}
+      NEXT_PUBLIC_FUNNELMETRY_INGEST_URL: ${NEXT_PUBLIC_FUNNELMETRY_INGEST_URL:-https://ingest-test.entidi.io.vn/v1/ingress/events}
       NEXT_TELEMETRY_DISABLED: "1"
     env_file:
       - path: ../apps/storefront/.env.local
@@ -97,9 +103,9 @@ services:
         condition: service_started
     environment:
       FUNNELMETRY_BOT_MODE: ${FUNNELMETRY_BOT_MODE:-full}
-      FUNNELMETRY_RELAY_URL: ${FUNNELMETRY_RELAY_URL:-https://ingest-test.entidi.io.vn/v1/ingress/events}
+      FUNNELMETRY_SOURCE_INGRESS_URL: ${FUNNELMETRY_SOURCE_INGRESS_URL:-https://ingest-test.entidi.io.vn/v1/ingress/events}
       FUNNELMETRY_SOURCE_ID: ${FUNNELMETRY_SOURCE_ID:-medusa-reference}
-      FUNNELMETRY_SOURCE_KEY_ID: ${FUNNELMETRY_SOURCE_KEY_ID:-medusa-reference-relay}
+      FUNNELMETRY_SOURCE_KEY_ID: ${FUNNELMETRY_SOURCE_KEY_ID:-medusa-reference-source}
       FUNNELMETRY_BROWSER_WRITE_KEY: ${NEXT_PUBLIC_FUNNELMETRY_BROWSER_WRITE_KEY:-}
       FUNNELMETRY_PRODUCT_IDS: ${FUNNELMETRY_PRODUCT_IDS:-}
       FUNNELMETRY_BOT_JOURNEYS: ${FUNNELMETRY_BOT_JOURNEYS:-10}

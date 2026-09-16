@@ -5,12 +5,17 @@
 Bot phát nhanh journey hoàn chỉnh ở phía source mà không cần mở trình duyệt hoặc chờ Laptop 2 chạy Pipeline:
 
 ```text
-Relay:  behavior.product_viewed → cart.add_clicked → checkout.started
+Relay transport smoke: behavior.product_viewed → cart.add_clicked → checkout.started
 Medusa: create cart → add real variant → address → shipping → payment → complete cart
 Backend subscriber: order.placed → medusa.order_placed
 ```
 
 Các behavior event dùng cùng `anonymous_id`, `session_id` và `correlation_id`, tuân theo `IngressEvent v1`. Bot chọn product variant thật từ catalog rồi dùng Store API chính thức của Medusa để tạo đơn. Vì vậy `medusa.order_placed` được native subscriber phát từ đơn thật; bot không tự dựng business event.
+
+> Catalog DEC-073 đã mở rộng behavior coverage sang page view, scroll milestone,
+> banner impression/click, search và filter. Phiên bản bot hiện tại vẫn chỉ là transport smoke;
+> chưa được dùng để claim full behavior coverage. Kế hoạch đồng bộ nằm tại
+> `System_Backbone/docs/implementation/BEHAVIOR_EVENT_CATALOG_V1_ROLLOUT.md`.
 
 `relay_queued` chỉ chứng minh Relay đã lưu behavior event bền vững. Khi Laptop 2 chưa kết nối, behavior event tiếp tục nằm trong spool của Relay; đây chưa phải receipt `accepted` từ Pipeline. Tương tự, việc tạo được order chứng minh native `order.placed` đã được kích hoạt ở Medusa, nhưng chưa chứng minh Pipeline đã nhận business event. Báo cáo đánh dấu phần này là `deferred_until_pipeline_private_ingress_is_available`.
 

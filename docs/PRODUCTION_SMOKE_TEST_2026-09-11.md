@@ -2,7 +2,9 @@
 
 ## Mục tiêu và phạm vi
 
-Xác nhận Storefront Medusa đã chuyển sang image production (`next build` + `next start`) vẫn hoạt động qua Cloudflare, theo luồng mua hàng cơ bản. Test chạy bằng Microsoft Edge thông qua Playwright tại `https://shop-test.simplething.id.vn/dk`.
+Xác nhận Storefront Medusa đã chuyển sang image production (`next build` + `next start`) vẫn hoạt động qua Cloudflare, theo luồng mua hàng cơ bản. Lượt test này chạy bằng Microsoft Edge thông qua Playwright tại hostname cũ `https://shop-test.simplething.id.vn/dk`.
+
+Sau lượt test, endpoint triển khai đã đổi sang `https://shop-test.entidi.io.vn/dk`; cần chạy lại smoke test khi nghiệm thu DNS mới. Screenshot và trace trong tài liệu này vẫn là bằng chứng của lượt test tại hostname cũ.
 
 Không thực hiện bước đặt đơn. Dữ liệu địa chỉ ở checkout là dữ liệu QA giả, chỉ nằm trong cart session của lượt test.
 
@@ -37,4 +39,3 @@ Các mốc screenshot chính:
 - Checkout Address: `page-2026-09-10T17-39-47-886Z.png`
 - Delivery: `page-2026-09-10T17-41-06-932Z.png`
 - Payment: `page-2026-09-10T17-41-31-416Z.png`
-

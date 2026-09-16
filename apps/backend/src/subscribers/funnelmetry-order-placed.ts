@@ -1,10 +1,11 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { createManagedDeliveryDispatcher } from "../funnelmetry/managed-delivery-dispatcher"
+import { normalizeOccurredAt } from "../funnelmetry/occurred-at"
 
 type OrderPlacedData = { id: string }
 type OrderItem = { product_id?: string; variant_id?: string; quantity?: number; unit_price?: number }
-type Order = { id: string; created_at?: string; currency_code?: string; total?: number; items?: OrderItem[] }
+type Order = { id: string; created_at?: string | Date; currency_code?: string; total?: number; items?: OrderItem[] }
 type Logger = { warn: (message: string) => void }
 type MedusaContainer = SubscriberArgs<OrderPlacedData>["container"]
 
@@ -43,14 +44,15 @@ async function enqueueOrderPlaced(orderId: string, container: MedusaContainer, l
   try {
     const orderModuleService = container.resolve(Modules.ORDER) as { retrieveOrder: (id: string, options: Record<string, unknown>) => Promise<Order> }
     const order = await orderModuleService.retrieveOrder(orderId, { relations: ["items"] })
-    if (!order.created_at || !order.currency_code) {
+    const occurredAt = normalizeOccurredAt(order.created_at)
+    if (!occurredAt || !order.currency_code) {
       logger.warn("Funnelmetry order forward skipped: missing authoritative order time/currency")
       return
     }
     getDispatcher(logger)?.enqueue({
       eventId: `medusa:order.placed:${orderId}`,
       sourceEventType: "medusa.order_placed",
-      occurredAt: order.created_at,
+      occurredAt,
       aggregate: { type: "order", id: order.id },
       sourcePayload: { order_id: order.id, currency_code: order.currency_code, total_minor: order.total, items: (order.items ?? []).map((item) => ({ product_id: item.product_id, variant_id: item.variant_id, quantity: item.quantity, unit_price_minor: item.unit_price })) },
     })

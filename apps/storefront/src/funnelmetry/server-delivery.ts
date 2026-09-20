@@ -64,11 +64,11 @@ function getDispatcher() {
 }
 
 function normalizeSearchQuery(query: string) {
-  const normalized = query.normalize("NFKC").trim().replace(/\s+/gu, " ").toLowerCase()
+  const normalized = query.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase()
   if (!normalized || normalized.length > normalizedQueryMaxLength) return null
-  if (/\b[\w.+-]+@[\w.-]+\.[a-z]{2,}\b/iu.test(normalized)) return null
-  if (/(?:\+?\d[\s().-]*){8,}/u.test(normalized)) return null
-  if (/\b(?:password|passcode|otp|cvv|cvc|card(?:\s*number)?|token|secret)\b/iu.test(normalized)) return null
+  if (/\b[\w.+-]+@[\w.-]+\.[a-z]{2,}\b/i.test(normalized)) return null
+  if (/(?:\+?\d[\s().-]*){8,}/.test(normalized)) return null
+  if (/\b(?:password|passcode|otp|cvv|cvc|card(?:\s*number)?|token|secret)\b/i.test(normalized)) return null
   return normalized
 }
 
@@ -82,7 +82,8 @@ export function enqueueSearchOutcome(input: {
     if (!opaqueIdPattern.test(input.searchInteractionId)) return
     const queryNormalized = normalizeSearchQuery(input.query)
     if (!queryNormalized) return
-    if (input.outcome === "succeeded" && (!Number.isSafeInteger(input.resultCount) || input.resultCount < 0)) return
+    const resultCount = input.resultCount
+    if (input.outcome === "succeeded" && (!Number.isSafeInteger(resultCount) || resultCount < 0)) return
     if (input.outcome === "failed" && input.resultCount !== undefined) return
 
     getDispatcher()?.enqueue({
@@ -95,7 +96,7 @@ export function enqueueSearchOutcome(input: {
         search_interaction_id: input.searchInteractionId,
         query_normalized: queryNormalized,
         outcome: input.outcome,
-        ...(input.outcome === "succeeded" ? { result_count: input.resultCount } : {}),
+        ...(input.outcome === "succeeded" && resultCount !== undefined ? { result_count: resultCount } : {}),
       },
     })
   } catch {

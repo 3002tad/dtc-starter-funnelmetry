@@ -165,12 +165,7 @@ export function createJourney({ sourceId, productId, variantId, cartId, sequence
 
   return [
     event("product-viewed", "behavior.product_viewed", 0, { product_id: productId }),
-    event("add-clicked", "cart.add_clicked", 1, {
-      product_id: productId,
-      ...(variantId ? { variant_id: variantId } : {}),
-      quantity: 1,
-    }),
-    event("checkout-started", "checkout.started", 2, { cart_id: effectiveCartId, step: "address" }),
+    event("checkout-started", "checkout.started", 1, { cart_id: effectiveCartId, step: "address" }),
   ]
 }
 
@@ -412,7 +407,7 @@ export async function runBot(options, { fetchImpl = fetch, log = console.log, er
           retryCount += result.attempts - 1
           latencies.push(result.latencyMs)
           if (options.verbose) log(`[funnelmetry-api-bot] ${event.event_id} -> ${result.receipt.status}`)
-          if (commerce && step === 1) await addCartItem(options, fetchImpl, cart.id, variant.variantId)
+          if (commerce && step === 0) await addCartItem(options, fetchImpl, cart.id, variant.variantId)
           if (options.stepDelayMs > 0) await sleep(options.stepDelayMs)
         }
 

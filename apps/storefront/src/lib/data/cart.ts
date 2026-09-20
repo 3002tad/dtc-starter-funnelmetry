@@ -15,6 +15,7 @@ import {
 } from "./cookies"
 import { getRegion } from "./regions"
 import { getLocale } from "./locale-actions"
+import { enqueueCartItemAdded } from "@funnelmetry/server-delivery"
 
 /**
  * Retrieves a cart by its ID. If no ID is provided, it will use the cart ID from the cookies.
@@ -147,7 +148,17 @@ export async function addToCart({
       {},
       headers
     )
-    .then(async () => {
+    .then(async ({ cart }: { cart: HttpTypes.StoreCart }) => {
+      const lineItem = cart.items?.find((item) => item.variant_id === variantId)
+      if (lineItem?.id && lineItem.variant_id && Number.isSafeInteger(lineItem.quantity)) {
+        enqueueCartItemAdded({
+          cartId: cart.id,
+          lineItemId: lineItem.id,
+          variantId: lineItem.variant_id,
+          quantity,
+          ...(lineItem.product_id ? { productId: lineItem.product_id } : {}),
+        })
+      }
       const cartCacheTag = await getCacheTag("carts")
       revalidateTag(cartCacheTag)
 

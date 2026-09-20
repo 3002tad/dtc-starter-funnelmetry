@@ -81,6 +81,8 @@ services:
       NEXT_PUBLIC_MEDUSA_BACKEND_URL: ${NEXT_PUBLIC_MEDUSA_BACKEND_URL:-http://api.localhost:9000}
       NEXT_PUBLIC_DEFAULT_REGION: ${NEXT_PUBLIC_DEFAULT_REGION:-dk}
       NEXT_PUBLIC_FUNNELMETRY_INGEST_URL: ${NEXT_PUBLIC_FUNNELMETRY_INGEST_URL:-https://ingest-test.entidi.io.vn/v1/ingress/events}
+      FUNNELMETRY_INGEST_URL: ${FUNNELMETRY_INGEST_URL:-http://host.docker.internal:32000/v1/ingress/events}
+      FUNNELMETRY_BACKEND_SIGNING_KEY: ${FUNNELMETRY_BACKEND_SIGNING_KEY:-}
       NEXT_TELEMETRY_DISABLED: "1"
     env_file:
       - path: ../apps/storefront/.env.local

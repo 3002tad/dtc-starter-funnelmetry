@@ -3,10 +3,19 @@
 import { FormEvent, useEffect, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
-import { trackSearchSubmitted } from "@funnelmetry/client"
-
 type StoreSearchProps = {
   initialQuery?: string
+}
+
+function createSearchInteractionId() {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return `search:${crypto.randomUUID()}`
+    }
+  } catch {
+    // Tracking identity generation must not block navigation.
+  }
+  return `search:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 14)}`
 }
 
 const StoreSearch = ({ initialQuery = "" }: StoreSearchProps) => {
@@ -20,12 +29,16 @@ const StoreSearch = ({ initialQuery = "" }: StoreSearchProps) => {
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const normalizedQuery = query.trim()
-    void trackSearchSubmitted(normalizedQuery.length)
 
     const params = new URLSearchParams(searchParams.toString())
     params.delete("page")
-    if (normalizedQuery) params.set("q", normalizedQuery)
-    else params.delete("q")
+    if (normalizedQuery) {
+      params.set("q", normalizedQuery)
+      params.set("fm_search_interaction_id", createSearchInteractionId())
+    } else {
+      params.delete("q")
+      params.delete("fm_search_interaction_id")
+    }
 
     const queryString = params.toString()
     router.push(queryString ? `${pathname}?${queryString}` : pathname)

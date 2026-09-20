@@ -3,7 +3,7 @@ import { createServer } from "node:http"
 import test from "node:test"
 import { createJourney, parseOptions, runBot } from "./funnelmetry-api-bot.mjs"
 
-test("creates the bounded three-step Medusa behavior journey", () => {
+test("creates the bounded V2 Medusa behavior journey without cart click", () => {
   const events = createJourney({
     sourceId: "medusa-reference",
     productId: "prod_test",
@@ -14,7 +14,6 @@ test("creates the bounded three-step Medusa behavior journey", () => {
 
   assert.deepEqual(events.map((event) => event.source_event_type), [
     "behavior.product_viewed",
-    "cart.add_clicked",
     "checkout.started",
   ])
   assert.equal(new Set(events.map((event) => event.correlation_id)).size, 1)
@@ -82,8 +81,8 @@ test("durably accepts complete journeys through Source Ingress", async (context)
   }, { log: () => {}, errorLog: () => {} })
 
   assert.equal(summary.journeys_succeeded, 2)
-  assert.equal(summary.events_source_accepted, 6)
-  assert.equal(received.length, 6)
+  assert.equal(summary.events_source_accepted, 4)
+  assert.equal(received.length, 4)
   assert.ok(received.every(({ headers }) => headers["x-funnelmetry-write-key"] === "test-write-key"))
 })
 
@@ -158,11 +157,11 @@ test("creates a real Medusa order in full mode instead of fabricating a business
     verbose: false,
   }, { log: () => {}, errorLog: () => {} })
 
-  assert.equal(summary.events_source_accepted, 3)
+  assert.equal(summary.events_source_accepted, 2)
   assert.equal(summary.medusa_orders_created, 1)
   assert.equal(summary.expected_native_business_event, "medusa.order_placed")
   assert.ok(requests.some(({ path }) => path === "/store/carts/cart_test/complete"))
-  assert.equal(requests.filter(({ path }) => path === "/v1/ingress/events").length, 3)
+  assert.equal(requests.filter(({ path }) => path === "/v1/ingress/events").length, 2)
   assert.equal(requests.some(({ path, body }) =>
     path === "/v1/ingress/events" && body.source_event_type === "medusa.order_placed"), false)
 })

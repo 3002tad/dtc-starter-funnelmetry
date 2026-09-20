@@ -37,6 +37,9 @@ For a server deployment, put the public backend URL, Medusa publishable key,
 default region and optional Funnelmetry browser write key in the server's
 non-versioned Compose env file, then pass it with `--env-file`. The backend
 signing key remains runtime-only and must not be passed as a Docker build arg.
+It is injected at runtime into both the Medusa backend and storefront server:
+the storefront uses it only for the server-side search/cart dispatcher and it
+must never use a `NEXT_PUBLIC_*` name.
 
 Create `apps/storefront/.env.local` from `runtime/storefront.env.example`, then
 set its publishable key from Medusa Admin. The storefront is available at

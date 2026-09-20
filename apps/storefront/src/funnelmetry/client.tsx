@@ -6,7 +6,7 @@ import { createBrowserSdk } from "@3002tad/funnelmetry-browser-sdk"
 
 const sourceId = "medusa-reference"
 const sourceKeyId = "medusa-reference-source"
-const allowedEventTypes = ["behavior.page_viewed","behavior.scroll_depth_reached","promotion.banner_impression","promotion.banner_clicked","behavior.search_submitted","behavior.filter_applied","behavior.product_viewed","cart.add_clicked","checkout.started"]
+const allowedEventTypes = ["behavior.page_viewed","behavior.scroll_depth_reached","promotion.banner_impression","promotion.banner_clicked","behavior.filter_applied","behavior.product_viewed","checkout.started"]
 const reliability = {"failureMode":"fail_open","timeoutMs":800,"maxQueueSize":200,"retry":{"maxAttempts":3},"circuitBreaker":{"failureThreshold":3,"cooldownMs":30000}}
 
 type EventPayload = Record<string, unknown>
@@ -76,15 +76,6 @@ function track(eventType: string, payload: EventPayload) {
   return currentSdk ? currentSdk.trackBehavior(eventType, payload) : Promise.resolve({ status: "inactive" })
 }
 
-function queryLengthBucket(length: number) {
-  if (length === 0) return "empty"
-  if (length <= 2) return "1-2"
-  if (length <= 5) return "3-5"
-  if (length <= 10) return "6-10"
-  if (length <= 20) return "11-20"
-  return "21+"
-}
-
 export function FunnelmetryBootstrap() {
   const pathname = usePathname()
 
@@ -119,17 +110,6 @@ export function FunnelmetryCheckoutStarted({ cartId, step }: { cartId: string; s
     void track("checkout.started", { cart_id: cartId, step, ...(page ? { page_instance_id: page.page_instance_id } : {}) })
   }, [cartId, pathname, step])
   return null
-}
-
-export function trackCartAddClicked(input: { productId: string; variantId: string; quantity: number; cartId?: string }) {
-  const page = activePageContext()
-  return track("cart.add_clicked", { product_id: input.productId, variant_id: input.variantId, quantity: input.quantity, ...(input.cartId ? { cart_id: input.cartId } : {}), ...(page ? { page_instance_id: page.page_instance_id } : {}) })
-}
-
-export function trackSearchSubmitted(queryLength: number) {
-  const page = activePageContext()
-  if (!page) return Promise.resolve({ status: "inactive" })
-  return track("behavior.search_submitted", { page_instance_id: page.page_instance_id, query_length_bucket: queryLengthBucket(queryLength) })
 }
 
 export function trackFilterApplied(input: { filterKeys: string[]; activeFilterCount: number }) {

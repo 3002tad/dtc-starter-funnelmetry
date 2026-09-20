@@ -4,6 +4,7 @@ import { OptionValueIds } from "@lib/util/product-option-filters"
 import ProductPreview from "@modules/products/components/product-preview"
 import { Pagination } from "@modules/store/components/pagination"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import { enqueueSearchOutcome } from "@funnelmetry/server-delivery"
 
 const PRODUCT_LIMIT = 12
 
@@ -25,6 +26,7 @@ export default async function PaginatedProducts({
   countryCode,
   optionValueIds,
   query,
+  searchInteractionId,
 }: {
   sortBy?: SortOptions
   page: number
@@ -34,6 +36,7 @@ export default async function PaginatedProducts({
   countryCode: string
   optionValueIds?: OptionValueIds
   query?: string
+  searchInteractionId?: string
 }) {
   const queryParams: PaginatedProductsParams = {
     limit: 12,
@@ -65,15 +68,28 @@ export default async function PaginatedProducts({
     return null
   }
 
-  const {
-    response: { products, count },
-  } = await listProductsWithSort({
-    page,
-    queryParams,
-    sortBy,
-    countryCode,
-    optionValueIds,
-  })
+  let products: Awaited<ReturnType<typeof listProductsWithSort>>["response"]["products"]
+  let count: number
+  try {
+    const response = await listProductsWithSort({
+      page,
+      queryParams,
+      sortBy,
+      countryCode,
+      optionValueIds,
+    })
+    products = response.response.products
+    count = response.response.count
+  } catch (error) {
+    if (query && searchInteractionId) {
+      enqueueSearchOutcome({ searchInteractionId, query, outcome: "failed" })
+    }
+    throw error
+  }
+
+  if (query && searchInteractionId) {
+    enqueueSearchOutcome({ searchInteractionId, query, outcome: "succeeded", resultCount: count })
+  }
 
   const totalPages = Math.ceil(count / PRODUCT_LIMIT)
 

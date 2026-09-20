@@ -6,7 +6,7 @@ Bot tạo journey nhanh ở phía Source mà không cần trình duyệt hoặc 
 online:
 
 ```text
-Source Ingress smoke: behavior.product_viewed → cart.add_clicked → checkout.started
+Source Ingress smoke: behavior.product_viewed → checkout.started
 Medusa: create cart → add real variant → address → shipping → payment → complete cart
 Backend subscriber: order.placed → medusa.order_placed → Source Ingress
 ```
@@ -15,6 +15,10 @@ Behavior event dùng cùng `anonymous_id`, `session_id` và `correlation_id`, tu
 theo `IngressEvent v1`. Full mode tạo order bằng Store API của Medusa, vì vậy
 business fact vẫn do native `order.placed` subscriber phát; bot không tự dựng
 `medusa.order_placed`.
+
+API bot không phát `cart.add_clicked`. Trong catalog V2, `cart.item_added` chỉ
+được source/server xác nhận; full mode tạo line item thật cho checkout nhưng
+không dùng API bot để claim delivery của frontend server-side cart hook.
 
 Bot chỉ chứng minh **Source durable acceptance**: mỗi receipt có
 `accepted|duplicate`, `event_feed_id` từ readiness và `ingress_seq`. Nó không

@@ -41,6 +41,12 @@ It is injected at runtime into both the Medusa backend and storefront server:
 the storefront uses it only for the server-side search/cart dispatcher and it
 must never use a `NEXT_PUBLIC_*` name.
 
+When Source Ingress runs on the same Docker host but in another Compose
+project, retain the default
+`FUNNELMETRY_INGEST_URL=http://host.docker.internal:32000/v1/ingress/events`.
+The runtime maps `host.docker.internal` into both backend and storefront
+containers; do not depend on a project-specific Docker DNS name.
+
 Create `apps/storefront/.env.local` from `runtime/storefront.env.example`, then
 set its publishable key from Medusa Admin. The storefront is available at
 `http://localhost:8000/dk`; Medusa Admin is at `http://localhost:9000/app`.

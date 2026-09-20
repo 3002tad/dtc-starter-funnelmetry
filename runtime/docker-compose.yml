@@ -89,10 +89,6 @@ services:
         required: false
     extra_hosts:
       - "api.localhost:host-gateway"
-      # The server-side Funnelmetry dispatcher runs in this container. Keep
-      # its default same-host Ingress endpoint reachable independently of
-      # whether Ingress is managed by this Compose project.
-      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:8000:8000"
 

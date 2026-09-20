@@ -41,11 +41,17 @@ It is injected at runtime into both the Medusa backend and storefront server:
 the storefront uses it only for the server-side search/cart dispatcher and it
 must never use a `NEXT_PUBLIC_*` name.
 
-When Source Ingress runs on the same Docker host but in another Compose
-project, retain the default
-`FUNNELMETRY_INGEST_URL=http://host.docker.internal:32000/v1/ingress/events`.
-The runtime maps `host.docker.internal` into both backend and storefront
-containers; do not depend on a project-specific Docker DNS name.
+When Source Ingress runs in another Compose project on a Linux deployment,
+connect the storefront to that project's external Docker network and use its
+service DNS name for `FUNNELMETRY_INGEST_URL` (for example,
+`http://source-ingress:32000/v1/ingress/events`). A port published only to
+the host loopback interface (`127.0.0.1`) is not reachable through
+`host.docker.internal` from a Linux container.
+
+`runtime/docker-compose.source-ingress.example.yml` is the corresponding
+server override. Copy it as a non-versioned server override, change the
+external network name when necessary, and include it after
+`runtime/docker-compose.yml` in every Compose command.
 
 Create `apps/storefront/.env.local` from `runtime/storefront.env.example`, then
 set its publishable key from Medusa Admin. The storefront is available at

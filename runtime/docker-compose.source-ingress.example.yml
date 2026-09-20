@@ -1,0 +1,18 @@
+services:
+  # The search/cart dispatcher lives in storefront; backend may also emit
+  # source-confirmed events, so both services use the Ingress network.
+  backend:
+    networks:
+      - default
+      - source_ingress
+
+  storefront:
+    networks:
+      - default
+      - source_ingress
+
+networks:
+  source_ingress:
+    external: true
+    # Replace with the actual external network name of the Ingress project.
+    name: funnelmetry_source_ingress_default

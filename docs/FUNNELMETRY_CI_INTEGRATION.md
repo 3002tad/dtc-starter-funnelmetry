@@ -117,3 +117,11 @@ this Medusa repository Actions read access from each package's settings. The
 committed `.npmrc` contains only the registry and `${NODE_AUTH_TOKEN}` reference;
 it never contains the token value. Publication is restricted to a reviewed
 `integration-kit-v<version>` tag in the Funnelmetry repository.
+
+If package Actions access cannot be delegated to this repository, add the repository
+secret `FUNNELMETRY_PACKAGE_READ_TOKEN`. Its value must be a fine-grained token with
+**Packages: Read** and access to the private Funnelmetry packages (or a classic PAT
+with `read:packages` and the repository access required by GitHub Packages). Never
+use a deploy key, a runtime signing key, or a browser write key here. The build
+workflow prefers this secret and falls back to `GITHUB_TOKEN` only when package
+access has explicitly been granted.

@@ -35,7 +35,10 @@ jobs:
       - name: Install exact dependency graph
         run: pnpm install --frozen-lockfile
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITHUB_TOKEN works only when every private package grants this
+          # repository's Actions workflow read access. The dedicated token is
+          # a least-privilege fallback for packages owned by Funnelmetry.
+          NODE_AUTH_TOKEN: ${{ secrets.FUNNELMETRY_PACKAGE_READ_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Build backend
         run: pnpm --filter @dtc/backend build

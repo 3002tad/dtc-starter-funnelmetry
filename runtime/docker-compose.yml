@@ -123,4 +123,4 @@ volumes:
 
 secrets:
   npm_token:
-    environment: FUNNELMETRY_PACKAGE_READ_TOKEN
+    environment: NODE_AUTH_TOKEN

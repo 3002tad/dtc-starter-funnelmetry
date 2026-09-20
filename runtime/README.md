@@ -16,12 +16,12 @@ Storefront build arguments.
 The local Compose profile explicitly permits an insecure session cookie for
 `http://localhost`; deployments must omit that override and use HTTPS.
 
-The private Funnelmetry packages are resolved while building the image. Export a
-GitHub token with read-only `read:packages` access; Docker mounts it as a BuildKit
+The private Funnelmetry packages are resolved while building the image. Export
+`NODE_AUTH_TOKEN` with `read:packages` access; Docker mounts it as a BuildKit
 secret and does not store it in an image layer:
 
 ```powershell
-$env:FUNNELMETRY_PACKAGE_READ_TOKEN = "<read-only-package-token>"
+$env:NODE_AUTH_TOKEN = "<read-only-package-token>"
 ```
 
 `NEXT_PUBLIC_*` variables are inlined into the browser bundle during `next

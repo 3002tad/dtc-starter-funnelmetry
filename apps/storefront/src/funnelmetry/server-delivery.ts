@@ -72,6 +72,10 @@ function normalizeSearchQuery(query: string) {
   return normalized
 }
 
+function isNonNegativeSafeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+}
+
 export function enqueueSearchOutcome(input: {
   searchInteractionId: string
   query: string
@@ -84,7 +88,7 @@ export function enqueueSearchOutcome(input: {
     if (!queryNormalized) return
     const resultCount = input.resultCount
     if (input.outcome === "succeeded") {
-      if (!Number.isSafeInteger(resultCount) || resultCount < 0) return
+      if (!isNonNegativeSafeInteger(resultCount)) return
       getDispatcher()?.enqueue({
         eventId: `medusa:search:${input.searchInteractionId}`,
         sourceEventType: "behavior.search_submitted",

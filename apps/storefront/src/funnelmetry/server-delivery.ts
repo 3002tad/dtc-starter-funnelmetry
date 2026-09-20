@@ -83,8 +83,25 @@ export function enqueueSearchOutcome(input: {
     const queryNormalized = normalizeSearchQuery(input.query)
     if (!queryNormalized) return
     const resultCount = input.resultCount
-    if (input.outcome === "succeeded" && (!Number.isSafeInteger(resultCount) || resultCount < 0)) return
-    if (input.outcome === "failed" && input.resultCount !== undefined) return
+    if (input.outcome === "succeeded") {
+      if (!Number.isSafeInteger(resultCount) || resultCount < 0) return
+      getDispatcher()?.enqueue({
+        eventId: `medusa:search:${input.searchInteractionId}`,
+        sourceEventType: "behavior.search_submitted",
+        sourceSchemaVersion: "2.0",
+        occurredAt: new Date().toISOString(),
+        aggregate: { type: "search_interaction", id: input.searchInteractionId },
+        sourcePayload: {
+          search_interaction_id: input.searchInteractionId,
+          query_normalized: queryNormalized,
+          outcome: input.outcome,
+          result_count: resultCount,
+        },
+      })
+      return
+    }
+
+    if (resultCount !== undefined) return
 
     getDispatcher()?.enqueue({
       eventId: `medusa:search:${input.searchInteractionId}`,
@@ -96,7 +113,6 @@ export function enqueueSearchOutcome(input: {
         search_interaction_id: input.searchInteractionId,
         query_normalized: queryNormalized,
         outcome: input.outcome,
-        ...(input.outcome === "succeeded" && resultCount !== undefined ? { result_count: resultCount } : {}),
       },
     })
   } catch {

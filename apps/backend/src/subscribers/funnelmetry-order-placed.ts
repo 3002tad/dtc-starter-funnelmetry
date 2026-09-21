@@ -28,7 +28,7 @@ function getDispatcher(logger: Logger) {
   dispatcher = createManagedDeliveryDispatcher({
     sourceId,
     sourceKeyId,
-    endpoint: "http://host.docker.internal:32000/v1/ingress/events",
+    endpoint: "http://source-ingress:32000/v1/ingress/events",
     signingKey,
     timeoutMs: reliability.timeoutMs,
     maxAttempts: reliability.retry.maxAttempts,

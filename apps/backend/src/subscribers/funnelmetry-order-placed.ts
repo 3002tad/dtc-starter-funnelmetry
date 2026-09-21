@@ -28,7 +28,7 @@ function getDispatcher(logger: Logger) {
   dispatcher = createManagedDeliveryDispatcher({
     sourceId,
     sourceKeyId,
-    endpoint: process.env.FUNNELMETRY_INGEST_URL ?? "http://host.docker.internal:32000/v1/ingress/events",
+    endpoint: "http://host.docker.internal:32000/v1/ingress/events",
     signingKey,
     timeoutMs: reliability.timeoutMs,
     maxAttempts: reliability.retry.maxAttempts,

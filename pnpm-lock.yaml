@@ -31,8 +31,8 @@ importers:
   apps/backend:
     dependencies:
       '@3002tad/funnelmetry-backend-integration-kit':
-        specifier: 0.2.0
-        version: 0.2.0
+        specifier: 0.2.2
+        version: 0.2.2
       '@medusajs/admin-sdk':
         specifier: 2.19.0
         version: 2.19.0
@@ -125,8 +125,8 @@ importers:
         specifier: 0.2.0
         version: 0.2.0
       '@3002tad/funnelmetry-browser-sdk':
-        specifier: 0.2.0
-        version: 0.2.0
+        specifier: 0.2.2
+        version: 0.2.2
       '@headlessui/react':
         specifier: ^2.2.0
         version: 2.2.9(react-dom@19.0.5(react@19.0.5))(react@19.0.5)
@@ -236,15 +236,21 @@ packages:
   '@3002tad/funnelmetry-backend-integration-kit@0.2.0':
     resolution: {integrity: sha512-hNTQcydY6JZw0jUBVbTJuIDmhOiWdL+lRwK6iBy6rvpBro96cCuPbhm/VOaQALwMqsmclEiHPw21ySK1sXK1fw==, tarball: https://npm.pkg.github.com/download/@3002tad/funnelmetry-backend-integration-kit/0.2.0/f44a9d79c005c9f6d34383bd0e2200a006698e46}
 
-  '@3002tad/funnelmetry-behavior-event-catalog@0.2.0':
-    resolution: {integrity: sha512-uqUDybQKjfBgoV73dFGyo6y/xgkcnQjP0UJXNk8srDCiYAExyLKqFN1vxxWIoKoBaH/Z9V5S8hxYOsEFXTVKtQ==, tarball: https://npm.pkg.github.com/download/@3002tad/funnelmetry-behavior-event-catalog/0.2.0/7151904f3d8616698489389a8d022456c8baa629}
+  '@3002tad/funnelmetry-backend-integration-kit@0.2.2':
+    resolution: {integrity: sha512-BiPYurrZb1/zON7bX4oBMBQ5VUUjpwweDlx+QfokeV5BicYokYp2I5GCQHtS38xOrN9KNVD9R6gVPTg9aw4mHw==, tarball: https://npm.pkg.github.com/download/@3002tad/funnelmetry-backend-integration-kit/0.2.2/c1ca1f420dd693ad9c7be59c0b0fcf55946e5117}
+
+  '@3002tad/funnelmetry-behavior-event-catalog@0.2.2':
+    resolution: {integrity: sha512-vvO9OvWfjfNB8w7v9VsO3JcMNadFOhx/j8NaKFctVmYMP1C71viZR/p1pvKMZvssLYGQyKDPAvZWNZeXWZ/0zA==, tarball: https://npm.pkg.github.com/download/@3002tad/funnelmetry-behavior-event-catalog/0.2.2/b68ccd67a54cc1bf9a45d4f28b118e695c60df49}
     engines: {node: '>=20'}
 
-  '@3002tad/funnelmetry-browser-sdk@0.2.0':
-    resolution: {integrity: sha512-SlNY2zF2LpuZFWfpyvA6YK0WKaQggWInf1TJg3qMrAH56sq9slJogwJyiTI0G2cbgsh/gODe0sOI29DCGet/Rw==, tarball: https://npm.pkg.github.com/download/@3002tad/funnelmetry-browser-sdk/0.2.0/bdc1575b5b5903f34fb09546ead0d14495592d23}
+  '@3002tad/funnelmetry-browser-sdk@0.2.2':
+    resolution: {integrity: sha512-pMEcKQpMP8oacU+5rsAk25l/URfzCLbcFh0L48ouYVF1FDLghWfJJr/c8QgzRia0NS2Cn4fXy1WVzqXSVnxvEQ==, tarball: https://npm.pkg.github.com/download/@3002tad/funnelmetry-browser-sdk/0.2.2/c5aa00f64ce1d18e850cab2d335c89b3ecb46f71}
 
   '@3002tad/funnelmetry-input-contract@0.1.4':
     resolution: {integrity: sha512-kHzAXDMZtLN5Os/qfXs5fvUFZ2Ivk0WrKBgu74r3DShOiAFicHXywujvR6PIcB303GJVks22igvQIC/+wFo1YA==, tarball: https://npm.pkg.github.com/download/@3002tad/funnelmetry-input-contract/0.1.4/4b9debfbd77d3157eba2cdb1fce5f971c45aab28}
+
+  '@3002tad/funnelmetry-input-contract@0.2.2':
+    resolution: {integrity: sha512-R9CbkPQVI9OEfrW7KaQdZ8j+eSq61ZLzMVWZxFSB3hOnavvEwn8NaYh5QT+biRykOvJm6XheJ9vDo7FfJbovgA==, tarball: https://npm.pkg.github.com/download/@3002tad/funnelmetry-input-contract/0.2.2/bc27e43ff80471d3a87b3952d56985eb3514ee63}
 
   '@algolia/abtesting@1.12.0':
     resolution: {integrity: sha512-EfW0bfxjPs+C7ANkJDw2TATntfBKsFiy7APh+KO0pQ8A6HYa5I0NjFuCGCXWfzzzLXNZta3QUl3n5Kmm6aJo9Q==}
@@ -8473,14 +8479,20 @@ snapshots:
     dependencies:
       '@3002tad/funnelmetry-input-contract': 0.1.4
 
-  '@3002tad/funnelmetry-behavior-event-catalog@0.2.0': {}
-
-  '@3002tad/funnelmetry-browser-sdk@0.2.0':
+  '@3002tad/funnelmetry-backend-integration-kit@0.2.2':
     dependencies:
-      '@3002tad/funnelmetry-behavior-event-catalog': 0.2.0
-      '@3002tad/funnelmetry-input-contract': 0.1.4
+      '@3002tad/funnelmetry-input-contract': 0.2.2
+
+  '@3002tad/funnelmetry-behavior-event-catalog@0.2.2': {}
+
+  '@3002tad/funnelmetry-browser-sdk@0.2.2':
+    dependencies:
+      '@3002tad/funnelmetry-behavior-event-catalog': 0.2.2
+      '@3002tad/funnelmetry-input-contract': 0.2.2
 
   '@3002tad/funnelmetry-input-contract@0.1.4': {}
+
+  '@3002tad/funnelmetry-input-contract@0.2.2': {}
 
   '@algolia/abtesting@1.12.0':
     dependencies:

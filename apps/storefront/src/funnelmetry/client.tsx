@@ -76,6 +76,7 @@ function track(eventType: string, payload: EventPayload) {
   return currentSdk ? currentSdk.trackBehavior(eventType, payload) : Promise.resolve({ status: "inactive" })
 }
 
+
 export function FunnelmetryBootstrap() {
   const pathname = usePathname()
 
@@ -103,14 +104,17 @@ export function FunnelmetryProductViewed({ productId, variantId }: { productId: 
   return null
 }
 
-export function FunnelmetryCheckoutStarted({ cartId, step }: { cartId: string; step: string }) {
+export function FunnelmetryCheckoutStarted({ cartId }: { cartId: string }) {
   const pathname = usePathname()
   useEffect(() => {
     const page = pageContext(pathname)
-    void track("checkout.started", { cart_id: cartId, step, ...(page ? { page_instance_id: page.page_instance_id } : {}) })
-  }, [cartId, pathname, step])
+    const currentSdk = getSdk()
+    if (!currentSdk || !page || !enabled("checkout.started")) return
+    void currentSdk.trackBehaviorOnce(`checkout.started:${cartId}`, "checkout.started", { cart_id: cartId, step: "address", page_instance_id: page.page_instance_id })
+  }, [cartId, pathname])
   return null
 }
+
 
 export function trackFilterApplied(input: { filterKeys: string[]; activeFilterCount: number }) {
   const page = activePageContext()

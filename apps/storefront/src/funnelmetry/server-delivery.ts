@@ -6,11 +6,11 @@ import { createManagedDeliveryDispatcher } from "@3002tad/funnelmetry-backend-in
 const sourceId = "medusa-reference"
 const sourceKeyId = "medusa-reference-source"
 const reliability = {
-  timeoutMs: 800,
-  maxQueueSize: 200,
-  maxAttempts: 3,
-  failureThreshold: 3,
-  cooldownMs: 30_000,
+  "timeoutMs": 800,
+  "maxQueueSize": 200,
+  "maxAttempts": 3,
+  "failureThreshold": 3,
+  "cooldownMs": 30000
 }
 const opaqueIdPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{2,99}$/
 const normalizedQueryMaxLength = 160
@@ -95,29 +95,19 @@ export function enqueueSearchOutcome(input: {
         sourceSchemaVersion: "2.0",
         occurredAt: new Date().toISOString(),
         aggregate: { type: "search_interaction", id: input.searchInteractionId },
-        sourcePayload: {
-          search_interaction_id: input.searchInteractionId,
-          query_normalized: queryNormalized,
-          outcome: input.outcome,
-          result_count: resultCount,
-        },
+        sourcePayload: { search_interaction_id: input.searchInteractionId, query_normalized: queryNormalized, outcome: input.outcome, result_count: resultCount },
       })
       return
     }
 
     if (resultCount !== undefined) return
-
     getDispatcher()?.enqueue({
       eventId: `medusa:search:${input.searchInteractionId}`,
       sourceEventType: "behavior.search_submitted",
       sourceSchemaVersion: "2.0",
       occurredAt: new Date().toISOString(),
       aggregate: { type: "search_interaction", id: input.searchInteractionId },
-      sourcePayload: {
-        search_interaction_id: input.searchInteractionId,
-        query_normalized: queryNormalized,
-        outcome: input.outcome,
-      },
+      sourcePayload: { search_interaction_id: input.searchInteractionId, query_normalized: queryNormalized, outcome: input.outcome },
     })
   } catch {
     warnSafe("Funnelmetry search tracking dropped without affecting the Search API")
@@ -133,13 +123,7 @@ export function enqueueCartItemAdded(input: CartItemAdded) {
       sourceSchemaVersion: "2.0",
       occurredAt: new Date().toISOString(),
       aggregate: { type: "cart", id: input.cartId },
-      sourcePayload: {
-        cart_id: input.cartId,
-        line_item_id: input.lineItemId,
-        variant_id: input.variantId,
-        quantity: input.quantity,
-        ...(input.productId ? { product_id: input.productId } : {}),
-      },
+      sourcePayload: { cart_id: input.cartId, line_item_id: input.lineItemId, variant_id: input.variantId, quantity: input.quantity, ...(input.productId ? { product_id: input.productId } : {}) },
     })
   } catch {
     warnSafe("Funnelmetry cart tracking dropped without affecting the cart operation")

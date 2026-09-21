@@ -32,7 +32,7 @@ export default async function Checkout({ searchParams }: CheckoutPageProps) {
 
   return (
     <>
-      <FunnelmetryCheckoutStarted cartId={cart.id} step={currentStep} />
+      <FunnelmetryCheckoutStarted cartId={cart.id} />
       <div className="content-container py-10 small:py-14">
       <div className="mb-10 max-w-2xl">
         <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-ui-fg-muted">

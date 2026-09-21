@@ -6,6 +6,18 @@ on:
       - "funnelmetry/integration/**"
     paths:
       - pnpm-lock.yaml
+      - apps/backend/package.json
+      - apps/backend/src/funnelmetry/**
+      - apps/backend/src/subscribers/funnelmetry-order-placed.ts
+      - apps/storefront/package.json
+      - apps/storefront/tsconfig.json
+      - apps/storefront/src/funnelmetry/**
+      - apps/storefront/src/app/layout.tsx
+      - apps/storefront/src/app/**/products/**/page.tsx
+      - apps/storefront/src/app/**/checkout/page.tsx
+      - apps/storefront/src/lib/data/cart.ts
+      - apps/storefront/src/modules/products/components/product-actions/index.tsx
+      - apps/storefront/src/modules/store/**
   pull_request:
 
 permissions:

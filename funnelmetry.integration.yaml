@@ -1,6 +1,7 @@
 # Non-secret declarative input-integration manifest.
-# CI reads this file and produces a review-only patch outside this checkout.
-apiVersion: funnelmetry.io/v1
+# CI treats this file as the source of truth, generates a patch with the pinned
+# planner, and applies that patch only on the current integration branch.
+apiVersion: funnelmetry.io/v2
 kind: InputIntegration
 
 host:
@@ -12,16 +13,15 @@ source:
 
 ingest:
   browser_url: https://ingest-test.entidi.io.vn/v1/ingress/events
-  backend_url: http://host.docker.internal:32000/v1/ingress/events
+  backend_url: http://source-ingress:32000/v1/ingress/events
 
 auth:
   source_key_id: medusa-reference-source
   browser_write_key_ref: FUNNELMETRY_BROWSER_WRITE_KEY
   backend_signing_key_ref: FUNNELMETRY_BACKEND_SIGNING_KEY
 
-frontend:
-  enabled: true
-  events:
+bindings:
+  browser:
     - behavior.page_viewed
     - behavior.scroll_depth_reached
     - promotion.banner_impression
@@ -29,10 +29,11 @@ frontend:
     - behavior.filter_applied
     - behavior.product_viewed
     - checkout.started
-
-backend:
-  enabled: true
-  binding: medusa.order_placed
+  storefront_server:
+    - behavior.search_submitted
+    - cart.item_added
+  medusa_backend:
+    - medusa.order_placed
 
 # Các giá trị này là budget của Integration Kit; không chứa secret và không
 # được phép biến lỗi Funnelmetry thành lỗi checkout/order của Medusa.

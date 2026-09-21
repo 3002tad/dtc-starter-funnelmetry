@@ -1,28 +1,31 @@
 # Funnelmetry CI integration
 
-This repository has two intentionally separate integration workflows. Neither
-workflow merges code, deploys, or receives runtime integration secrets.
+This repository has three intentionally separate integration jobs. The manifest
+is the source of truth; none of these jobs merges, deploys, or receives runtime
+integration secrets.
 
 ## What runs in GitHub Actions
-
-The workflow [funnelmetry-integration-plan.yml](../.github/workflows/funnelmetry-integration-plan.yml):
-
-1. Checks out this Medusa repository.
-2. Checks out the reviewed Funnelmetry planner release.
-3. Reads the non-secret [funnelmetry.integration.yaml](../funnelmetry.integration.yaml).
-4. Validates the pinned DTC Starter/Medusa version and generates two artifacts:
-   `integration-plan.json` and `integration.patch`.
-
-The planner rejects an artifact directory inside the Medusa checkout. The workflow
-also has `contents: read`, so it cannot push, create PRs, or merge generated code.
 
 The push-triggered [funnelmetry-integration-propose.yml](../.github/workflows/funnelmetry-integration-propose.yml)
 runs when `funnelmetry.integration.yaml` changes on a pre-created
 `funnelmetry/integration/<name>` branch. That manifest commit is the source owner's
-authorization to apply the generated patch. `propose` validates the branch prefix,
-checks out, commits to, and pushes only the current branch. It does not open a PR,
-create another branch, merge, deploy, or alter any other branch. A rerun with an empty
-planner patch ends as `no_changes` rather than creating an empty commit.
+authorization to apply the generated patch only to that same branch. It validates the
+pinned Medusa version,
+generates `integration-plan.json` and `integration.patch` outside the checkout,
+checks the generated-file allowlist, resolves private packages, builds/type-checks
+the host, then commits to and pushes only that target branch. It uploads an audit
+artifact; a rerun with an empty planner patch ends as `no_changes`.
+
+[funnelmetry-integration-plan.yml](../.github/workflows/funnelmetry-integration-plan.yml)
+runs read-only when the manifest is pushed on the integration branch. It uses the
+same pinned planner to record `integration-plan.json`, validate that the generated
+patch applies, list the planned files in the workflow summary, and upload the plan
+artifact. It is an informational check, not a pre-apply approval gate, and it does
+not alter source code.
+
+[funnelmetry-integration-build.yml](../.github/workflows/funnelmetry-integration-build.yml)
+then validates the exact committed dependency graph and host bindings. It is the
+post-proposal build gate and has no write or deployment permission.
 
 ## Private Funnelmetry repository access
 
@@ -63,16 +66,17 @@ circuit-open outcomes. Reconciliation is still required to quantify the pre-hand
 
 ## Review and release flow
 
-1. Change the manifest in a branch and open a PR.
-2. Download the generated patch artifact and review its ownership/capability report.
-3. Create `funnelmetry/integration/<name>` from the reviewed host branch. After a
-   host update, merge/rebase that host branch here before rerunning `plan`.
-4. Push the manifest change. **Funnelmetry integration propose** applies the generated
-   patch to the same integration branch automatically.
-5. Review the new commit in a normal source PR and merge it through the Medusa
-   release process. A source fingerprint/layout mismatch must stop the workflow;
-   it must not apply an old patch opportunistically.
-6. The proposal workflow resolves the pinned private packages, installs with
+1. Create `funnelmetry/integration/<name>` from the chosen host base branch, then
+   change and push the manifest on that trusted integration branch.
+2. **Funnelmetry integration plan** reads the YAML and records/checks the exact
+   patch implied by it. In parallel, **Funnelmetry integration propose** regenerates
+   that patch, validates its ownership allowlist, injects it, validates the host,
+   then commits and pushes only to the same pre-created branch. Neither workflow
+   creates a branch, and plan is not an approval gate for propose.
+3. Use the integration branch as the source of the normal Medusa release/deploy flow.
+   A source fingerprint/layout mismatch must stop the workflow; it must not apply an
+   old patch opportunistically.
+4. The proposal workflow resolves the pinned private packages, installs with
    `--frozen-lockfile`, builds the Medusa backend, type-checks the storefront binding,
    and only then commits the updated `pnpm-lock.yaml`. A full Next.js production build
    also needs a running, seeded Medusa API because the DTC starter generates catalog
@@ -104,6 +108,12 @@ bindings read the key names declared by `browser_write_key_ref` and
 `backend_signing_key_ref`. For the browser, the configured write-key name is exposed
 with the `NEXT_PUBLIC_` prefix; the backend signing key is never exposed to the
 storefront. Do not put secret values in the manifest.
+
+The manifest's `bindings` block is also authoritative. `browser` is the browser
+event allowlist; `storefront_server` explicitly enables the fail-open search and
+persisted-cart hooks; `medusa_backend` explicitly enables the authoritative Medusa
+order hook. The planner must reject missing/unknown required bindings instead of
+silently injecting undeclared tracking behavior.
 
 ## Initial activation prerequisite
 

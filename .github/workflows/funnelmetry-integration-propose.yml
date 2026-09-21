@@ -75,7 +75,7 @@ jobs:
           corepack enable
           corepack prepare pnpm@10.11.1 --activate
 
-      - name: Generate review patch
+      - name: Generate patch from integration manifest
         run: |
           mkdir -p "$RUNNER_TEMP/funnelmetry-plan"
           node funnelmetry/tools/medusa-ci-installer/src/cli.mjs plan \
@@ -134,7 +134,7 @@ jobs:
           echo "status=applied" >> "$GITHUB_OUTPUT"
           echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: Publish review handoff
+      - name: Publish integration handoff
         run: |
           {
             echo "## Funnelmetry integration proposal"
@@ -144,10 +144,10 @@ jobs:
             echo "Commit: \`${{ steps.apply.outputs.commit || 'none' }}\`."
             echo "The proposal used planner commit \`${{ vars.FUNNELMETRY_PLANNER_REF }}\`."
             echo "Source fingerprint: \`${{ steps.plan_metadata.outputs.source_fingerprint }}\`; planned files: \`${{ steps.plan_metadata.outputs.change_count }}\`."
-            echo "Review the diff and run normal Medusa CI before merging. This workflow did not create another branch, merge, deploy, or access runtime secrets."
+            echo "This workflow wrote only the pre-created target branch; it did not create another branch, merge, deploy, or access runtime secrets."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload generated review artifact
+      - name: Upload generated plan and patch
         uses: actions/upload-artifact@v4
         with:
           name: funnelmetry-integration-proposal-${{ github.run_id }}

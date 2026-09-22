@@ -129,7 +129,7 @@ test("creates a real Medusa order in full mode instead of fabricating a business
       return send(200, { payment_collection: { id: "paycol_test" } })
     }
     if (url.pathname === "/store/carts/cart_test/complete") {
-      return send(200, { type: "order", order: { id: "order_test" } })
+      return send(200, { type: "order", order: { id: "order_test", currency_code: "GBP", total: 42.5 } })
     }
     if (request.method === "POST") return send(200, { cart: { id: "cart_test" } })
     return send(404, { error: "not_found" })
@@ -159,6 +159,12 @@ test("creates a real Medusa order in full mode instead of fabricating a business
 
   assert.equal(summary.events_source_accepted, 2)
   assert.equal(summary.medusa_orders_created, 1)
+  assert.deepEqual(summary.medusa_order_evidence, [{
+    cart_id: "cart_test",
+    order_id: "order_test",
+    currency_code: "gbp",
+    total_amount: "42.5",
+  }])
   assert.equal(summary.expected_native_business_event, "medusa.order_placed")
   assert.ok(requests.some(({ path }) => path === "/store/carts/cart_test/complete"))
   assert.equal(requests.filter(({ path }) => path === "/v1/ingress/events").length, 2)

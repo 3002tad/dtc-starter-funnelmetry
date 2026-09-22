@@ -32,8 +32,8 @@
     "react-dom": "19.0.5",
     "server-only": "^0.0.1",
     "tailwindcss-radix": "^2.8.0",
-    "@3002tad/funnelmetry-browser-sdk": "0.2.2",
-    "@3002tad/funnelmetry-backend-integration-kit": "0.2.0"
+    "@3002tad/funnelmetry-browser-sdk": "0.2.3",
+    "@3002tad/funnelmetry-backend-integration-kit": "0.2.3"
   },
   "devDependencies": {
     "@babel/core": "^7.17.5",

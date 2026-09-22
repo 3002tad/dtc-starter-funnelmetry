@@ -1,6 +1,7 @@
 import "server-only"
 
 import { randomUUID } from "node:crypto"
+import { cookies } from "next/headers"
 import { createManagedDeliveryDispatcher } from "@3002tad/funnelmetry-backend-integration-kit"
 
 const sourceId = "medusa-reference"
@@ -14,6 +15,8 @@ const reliability = {
 }
 const opaqueIdPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{2,99}$/
 const normalizedQueryMaxLength = 160
+const anonymousIdentityCookie = "funnelmetry_anonymous_id_medusa-reference"
+const sessionIdentityCookie = "funnelmetry_session_id_medusa-reference"
 
 type CartItemAdded = {
   cartId: string
@@ -63,6 +66,24 @@ function getDispatcher() {
   return dispatcher
 }
 
+function identityValue(value: string | undefined) {
+  if (!value) return undefined
+  try {
+    const decoded = decodeURIComponent(value)
+    return /^[A-Za-z0-9][A-Za-z0-9._:-]{2,255}$/.test(decoded) ? decoded : undefined
+  } catch {
+    return undefined
+  }
+}
+
+async function readBrowserIdentity() {
+  const cookieStore = await cookies()
+  return {
+    anonymousId: identityValue(cookieStore.get(anonymousIdentityCookie)?.value),
+    sessionId: identityValue(cookieStore.get(sessionIdentityCookie)?.value),
+  }
+}
+
 function normalizeSearchQuery(query: string) {
   const normalized = query.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase()
   if (!normalized || normalized.length > normalizedQueryMaxLength) return null
@@ -76,7 +97,7 @@ function isNonNegativeSafeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
 }
 
-export function enqueueSearchOutcome(input: {
+export async function enqueueSearchOutcome(input: {
   searchInteractionId: string
   query: string
   outcome: "succeeded" | "failed"
@@ -84,6 +105,7 @@ export function enqueueSearchOutcome(input: {
 }) {
   try {
     if (!opaqueIdPattern.test(input.searchInteractionId)) return
+    const identity = await readBrowserIdentity()
     const queryNormalized = normalizeSearchQuery(input.query)
     if (!queryNormalized) return
     const resultCount = input.resultCount
@@ -95,6 +117,9 @@ export function enqueueSearchOutcome(input: {
         sourceSchemaVersion: "2.0",
         occurredAt: new Date().toISOString(),
         aggregate: { type: "search_interaction", id: input.searchInteractionId },
+        anonymousId: identity.anonymousId,
+        sessionId: identity.sessionId,
+        correlationId: `search:${input.searchInteractionId}`,
         sourcePayload: { search_interaction_id: input.searchInteractionId, query_normalized: queryNormalized, outcome: input.outcome, result_count: resultCount },
       })
       return
@@ -107,6 +132,9 @@ export function enqueueSearchOutcome(input: {
       sourceSchemaVersion: "2.0",
       occurredAt: new Date().toISOString(),
       aggregate: { type: "search_interaction", id: input.searchInteractionId },
+      anonymousId: identity.anonymousId,
+      sessionId: identity.sessionId,
+      correlationId: `search:${input.searchInteractionId}`,
       sourcePayload: { search_interaction_id: input.searchInteractionId, query_normalized: queryNormalized, outcome: input.outcome },
     })
   } catch {
@@ -114,15 +142,19 @@ export function enqueueSearchOutcome(input: {
   }
 }
 
-export function enqueueCartItemAdded(input: CartItemAdded) {
+export async function enqueueCartItemAdded(input: CartItemAdded) {
   try {
     if (!input.cartId || !input.lineItemId || !input.variantId || !Number.isSafeInteger(input.quantity) || input.quantity < 1) return
+    const identity = await readBrowserIdentity()
     getDispatcher()?.enqueue({
       eventId: `medusa:cart.item_added:${input.cartId}:${input.lineItemId}:${randomUUID()}`,
       sourceEventType: "cart.item_added",
       sourceSchemaVersion: "2.0",
       occurredAt: new Date().toISOString(),
       aggregate: { type: "cart", id: input.cartId },
+      anonymousId: identity.anonymousId,
+      sessionId: identity.sessionId,
+      correlationId: `cart:${input.cartId}`,
       sourcePayload: { cart_id: input.cartId, line_item_id: input.lineItemId, variant_id: input.variantId, quantity: input.quantity, ...(input.productId ? { product_id: input.productId } : {}) },
     })
   } catch {

@@ -3,8 +3,12 @@ type Logger = { warn: (message: string) => void }
 type MappedSourceEvent = {
   eventId: string
   sourceEventType: string
+  sourceSchemaVersion?: string
   occurredAt: string
   aggregate: { type: string; id: string }
+  anonymousId?: string
+  sessionId?: string
+  correlationId?: string
   sourcePayload: Record<string, unknown>
 }
 

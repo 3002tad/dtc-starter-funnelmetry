@@ -9,6 +9,9 @@ const sourceKeyId = "medusa-reference-source"
 const allowedEventTypes = ["behavior.page_viewed","behavior.scroll_depth_reached","promotion.banner_impression","promotion.banner_clicked","behavior.filter_applied","behavior.product_viewed","checkout.started"]
 const reliability = {"failureMode":"fail_open","timeoutMs":800,"maxQueueSize":200,"retry":{"maxAttempts":3},"circuitBreaker":{"failureThreshold":3,"cooldownMs":30000}}
 
+const anonymousIdentityCookie = "funnelmetry_anonymous_id_medusa-reference"
+const sessionIdentityCookie = "funnelmetry_session_id_medusa-reference"
+
 type EventPayload = Record<string, unknown>
 type BrowserSdk = ReturnType<typeof createBrowserSdk>
 type PageContext = { page_type: string; path_template: string; page_instance_id: string }
@@ -70,10 +73,27 @@ function activePageContext() {
   return pageContext(typeof window === "undefined" ? null : window.location.pathname)
 }
 
-function track(eventType: string, payload: EventPayload) {
+function cartCorrelationId(cartId: string) {
+  return `cart:${cartId}`
+}
+
+function syncServerIdentity(currentSdk: BrowserSdk) {
+  const identity = currentSdk.getIdentity()
+  if (typeof document === "undefined") return
+  const secure = window.location.protocol === "https:" ? "; Secure" : ""
+  if (!identity) {
+    document.cookie = `${anonymousIdentityCookie}=; Path=/; Max-Age=0; SameSite=Lax${secure}`
+    document.cookie = `${sessionIdentityCookie}=; Path=/; Max-Age=0; SameSite=Lax${secure}`
+    return
+  }
+  document.cookie = `${anonymousIdentityCookie}=${encodeURIComponent(identity.anonymousId)}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`
+  document.cookie = `${sessionIdentityCookie}=${encodeURIComponent(identity.sessionId)}; Path=/; SameSite=Lax${secure}`
+}
+
+function track(eventType: string, payload: EventPayload, context: { correlationId?: string } = {}) {
   if (!enabled(eventType)) return Promise.resolve({ status: "disabled_by_manifest" })
   const currentSdk = getSdk()
-  return currentSdk ? currentSdk.trackBehavior(eventType, payload) : Promise.resolve({ status: "inactive" })
+  return currentSdk ? currentSdk.trackBehavior(eventType, payload, context) : Promise.resolve({ status: "inactive" })
 }
 
 
@@ -86,6 +106,7 @@ export function FunnelmetryBootstrap() {
     const currentSdk = getSdk()
     const page = pageContext(pathname)
     if (!currentSdk || !page) return
+    syncServerIdentity(currentSdk)
     if (enabled("behavior.page_viewed")) void currentSdk.trackPageView(page)
     if (!enabled("behavior.scroll_depth_reached")) return
     return currentSdk.attachScrollDepthObserver({ page })
@@ -110,7 +131,7 @@ export function FunnelmetryCheckoutStarted({ cartId }: { cartId: string }) {
     const page = pageContext(pathname)
     const currentSdk = getSdk()
     if (!currentSdk || !page || !enabled("checkout.started")) return
-    void currentSdk.trackBehaviorOnce(`checkout.started:${cartId}`, "checkout.started", { cart_id: cartId, step: "address", page_instance_id: page.page_instance_id })
+    void currentSdk.trackBehaviorOnce(`checkout.started:${cartId}`, "checkout.started", { cart_id: cartId, step: "address", page_instance_id: page.page_instance_id }, { correlationId: cartCorrelationId(cartId) })
   }, [cartId, pathname])
   return null
 }

@@ -377,6 +377,7 @@ export async function runBot(options, { fetchImpl = fetch, log = console.log, er
   const failures = []
   let eventCount = 0
   let orderCount = 0
+  const medusaOrders = []
   let retryCount = 0
   let nextJourney = 0
 
@@ -419,6 +420,12 @@ export async function runBot(options, { fetchImpl = fetch, log = console.log, er
             runId,
           })
           orderCount += 1
+          medusaOrders.push({
+            cart_id: cart.id,
+            order_id: order.id,
+            currency_code: typeof order.currency_code === "string" ? order.currency_code.toLowerCase() : null,
+            total_amount: order.total === undefined || order.total === null ? null : String(order.total),
+          })
           if (options.verbose) log(`[funnelmetry-api-bot] cart ${cart.id} -> order ${order.id}`)
         }
       } catch (error) {
@@ -442,6 +449,7 @@ export async function runBot(options, { fetchImpl = fetch, log = console.log, er
     journeys_failed: failures.length,
     events_source_accepted: eventCount,
     medusa_orders_created: orderCount,
+    medusa_order_evidence: medusaOrders,
     expected_native_business_event: fullMode ? "medusa.order_placed" : null,
     business_delivery_verification: fullMode ? "source_acceptance_only_pipeline_pull_evidence_pending" : "not_applicable",
     request_retries: retryCount,

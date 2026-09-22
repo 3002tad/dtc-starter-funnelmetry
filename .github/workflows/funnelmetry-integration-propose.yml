@@ -1,11 +1,13 @@
 name: Funnelmetry integration propose
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - "funnelmetry/integration/**"
     paths:
       - funnelmetry.integration.yaml
+      - .github/workflows/funnelmetry-integration-propose.yml
 
 # A manifest commit is the source owner's authorization to update that same
 # integration branch. This workflow never creates branches, merges, deploys,
@@ -19,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      packages: read
     steps:
       - name: Validate immutable planner and current target branch
         env:
@@ -64,8 +67,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          registry-url: https://npm.pkg.github.com
+          scope: "@3002tad"
 
-      - name: Generate review patch
+      - name: Set up pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.11.1 --activate
+
+      - name: Generate patch from integration manifest
         run: |
           mkdir -p "$RUNNER_TEMP/funnelmetry-plan"
           node funnelmetry/tools/medusa-ci-installer/src/cli.mjs plan \
@@ -81,22 +91,37 @@ jobs:
       - name: Validate generated-file allowlist
         working-directory: medusa
         run: |
-          git apply --check "$RUNNER_TEMP/funnelmetry-plan/integration.patch"
+          git apply --check --allow-empty "$RUNNER_TEMP/funnelmetry-plan/integration.patch"
           while IFS= read -r file; do
             case "$file" in
-              "package.json" | "apps/backend/package.json" | "apps/backend/src/subscribers/funnelmetry-order-placed.ts" | "apps/storefront/package.json" | "apps/storefront/tsconfig.json" | "apps/storefront/src/app/layout.tsx" | "apps/storefront/src/app/[countryCode]/(main)/products/[handle]/page.tsx" | "apps/storefront/src/modules/products/components/product-actions/index.tsx" | "apps/storefront/src/app/[countryCode]/(checkout)/checkout/page.tsx" | "apps/storefront/src/funnelmetry/client.tsx") ;;
+              "package.json" | "apps/backend/package.json" | "apps/backend/src/funnelmetry/managed-delivery-dispatcher.ts" | "apps/backend/src/funnelmetry/occurred-at.ts" | "apps/backend/src/subscribers/funnelmetry-order-placed.ts" | "apps/storefront/package.json" | "apps/storefront/tsconfig.json" | "apps/storefront/src/app/layout.tsx" | "apps/storefront/src/app/[countryCode]/(main)/products/[handle]/page.tsx" | "apps/storefront/src/modules/products/components/product-actions/index.tsx" | "apps/storefront/src/app/[countryCode]/(checkout)/checkout/page.tsx" | "apps/storefront/src/lib/data/cart.ts" | "apps/storefront/src/modules/store/components/store-search/index.tsx" | "apps/storefront/src/app/[countryCode]/(main)/store/page.tsx" | "apps/storefront/src/modules/store/templates/index.tsx" | "apps/storefront/src/modules/store/templates/paginated-products.tsx" | "apps/storefront/src/funnelmetry/client.tsx" | "apps/storefront/src/funnelmetry/consent-notice.tsx" | "apps/storefront/src/funnelmetry/server-delivery.ts") ;;
               *) echo "Generated patch changes a non-owned file: $file" >&2; exit 1 ;;
             esac
-          done < <(git apply --numstat "$RUNNER_TEMP/funnelmetry-plan/integration.patch" | cut -f3)
+          done < <(git apply --numstat --allow-empty "$RUNNER_TEMP/funnelmetry-plan/integration.patch" | cut -f3)
 
-      - name: Apply patch to target branch
+      - name: Apply patch, resolve packages, and validate host build
         id: apply
         working-directory: medusa
         env:
           TARGET_REF: ${{ github.ref_name }}
+          # GITHUB_TOKEN is preferred when package Actions access is available.
+          # A repository secret provides a least-privilege fallback for private
+          # packages whose access cannot be delegated to this host repository.
+          NODE_AUTH_TOKEN: ${{ secrets.FUNNELMETRY_PACKAGE_READ_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          git apply --index "$RUNNER_TEMP/funnelmetry-plan/integration.patch"
+          git apply --index --allow-empty "$RUNNER_TEMP/funnelmetry-plan/integration.patch"
+          pnpm install --lockfile-only
+          unexpected="$(git diff --name-only)"
+          if [[ -n "$unexpected" && "$unexpected" != "pnpm-lock.yaml" ]]; then
+            echo "Package resolution changed unexpected files:" >&2
+            echo "$unexpected" >&2
+            exit 1
+          fi
+          git add pnpm-lock.yaml
           git diff --cached --check
+          pnpm install --frozen-lockfile
+          pnpm --filter @dtc/backend build
+          pnpm --filter @dtc/storefront exec tsc --noEmit --pretty false
           if git diff --cached --quiet; then
             echo "status=no_changes" >> "$GITHUB_OUTPUT"
             echo "commit=" >> "$GITHUB_OUTPUT"
@@ -109,7 +134,7 @@ jobs:
           echo "status=applied" >> "$GITHUB_OUTPUT"
           echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: Publish review handoff
+      - name: Publish integration handoff
         run: |
           {
             echo "## Funnelmetry integration proposal"
@@ -119,10 +144,10 @@ jobs:
             echo "Commit: \`${{ steps.apply.outputs.commit || 'none' }}\`."
             echo "The proposal used planner commit \`${{ vars.FUNNELMETRY_PLANNER_REF }}\`."
             echo "Source fingerprint: \`${{ steps.plan_metadata.outputs.source_fingerprint }}\`; planned files: \`${{ steps.plan_metadata.outputs.change_count }}\`."
-            echo "Review the diff and run normal Medusa CI before merging. This workflow did not create another branch, merge, deploy, or access runtime secrets."
+            echo "This workflow wrote only the pre-created target branch; it did not create another branch, merge, deploy, or access runtime secrets."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload generated review artifact
+      - name: Upload generated plan and patch
         uses: actions/upload-artifact@v4
         with:
           name: funnelmetry-integration-proposal-${{ github.run_id }}

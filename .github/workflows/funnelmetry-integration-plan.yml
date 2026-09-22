@@ -1,46 +1,51 @@
 name: Funnelmetry integration plan
 
 on:
-  pull_request:
+  workflow_dispatch:
+  push:
+    branches:
+      - "funnelmetry/integration/**"
     paths:
       - funnelmetry.integration.yaml
       - .github/workflows/funnelmetry-integration-plan.yml
-  workflow_dispatch:
 
-# The workflow can only read Medusa source and upload artifacts. It cannot commit,
-# open a PR, merge, deploy or access runtime integration secrets.
+# This read-only workflow records the patch implied by the manifest. It does not
+# gate or alter the propose workflow, create branches, merge, or deploy.
 permissions:
   contents: read
 
 jobs:
   plan:
-    name: Validate and generate review artifact
+    name: Record and check manifest-driven changes
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Medusa source
+      - name: Checkout selected Medusa integration branch
         uses: actions/checkout@v4
         with:
+          fetch-depth: 1
           path: medusa
 
-      - name: Validate immutable Funnelmetry planner reference
+      - name: Validate target branch and immutable planner reference
         env:
+          TARGET_REF: ${{ github.ref_name }}
           PLANNER_REF: ${{ vars.FUNNELMETRY_PLANNER_REF }}
         run: |
+          if [[ ! "$TARGET_REF" =~ ^funnelmetry/integration/[a-z0-9][a-z0-9._-]{0,80}$ ]]; then
+            echo "The current branch must be a pre-created branch under funnelmetry/integration/" >&2
+            exit 1
+          fi
           if [[ ! "$PLANNER_REF" =~ ^[0-9a-f]{40}$ ]]; then
             echo "Repository variable FUNNELMETRY_PLANNER_REF must be a reviewed immutable 40-character commit SHA" >&2
             exit 1
           fi
 
-      # The repository variable is configured once by an administrator. It is
-      # never read from a contributor-controlled manifest or mutable branch.
-      - name: Checkout Funnelmetry CI planner
+      - name: Checkout reviewed Funnelmetry planner
         uses: actions/checkout@v4
         with:
           repository: 3002tad/Funnelmetry
           ref: ${{ vars.FUNNELMETRY_PLANNER_REF }}
           path: funnelmetry
-          # Fine-grained PAT or GitHub App token: Contents = Read, scoped only
-          # to 3002tad/Funnelmetry. This secret is unavailable to fork PRs.
+          persist-credentials: false
           token: ${{ secrets.FUNNELMETRY_PLANNER_READ_TOKEN }}
 
       - name: Set up Node
@@ -48,15 +53,33 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Run plan-only integration check
+      - name: Generate, check, and record manifest-driven patch
+        working-directory: medusa
         run: |
           mkdir -p "$RUNNER_TEMP/funnelmetry-plan"
-          node funnelmetry/tools/medusa-ci-installer/src/cli.mjs plan \
+          node "$GITHUB_WORKSPACE/funnelmetry/tools/medusa-ci-installer/src/cli.mjs" plan \
             --config "$GITHUB_WORKSPACE/medusa/funnelmetry.integration.yaml" \
             --project "$GITHUB_WORKSPACE/medusa" \
             --out "$RUNNER_TEMP/funnelmetry-plan"
+          git apply --check --allow-empty "$RUNNER_TEMP/funnelmetry-plan/integration.patch"
+          {
+            echo "# Funnelmetry integration plan"
+            echo
+            echo "Configured branch: \`${GITHUB_REF_NAME}\`"
+            echo "Planner commit: \`${{ vars.FUNNELMETRY_PLANNER_REF }}\`"
+            echo
+            echo "## Files the generated patch will change"
+            echo '```text'
+            git apply --numstat --allow-empty "$RUNNER_TEMP/funnelmetry-plan/integration.patch"
+            echo '```'
+            echo
+            echo "## Planner record"
+            echo '```json'
+            cat "$RUNNER_TEMP/funnelmetry-plan/integration-plan.json"
+            echo '```'
+          } | tee "$RUNNER_TEMP/funnelmetry-plan/integration-change-summary.md" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload review artifact
+      - name: Upload plan artifact
         uses: actions/upload-artifact@v4
         with:
           name: funnelmetry-integration-plan-${{ github.sha }}

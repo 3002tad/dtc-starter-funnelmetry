@@ -1,7 +1,7 @@
 # Funnelmetry CI integration
 
-This repository has three intentionally separate integration jobs. The manifest
-is the source of truth; none of these jobs merges, deploys, or receives runtime
+This repository has two intentionally separate integration workflows. The manifest
+is the source of truth; neither workflow merges, deploys, or receives runtime
 integration secrets.
 
 ## What runs in GitHub Actions
@@ -22,10 +22,6 @@ same pinned planner to record `integration-plan.json`, validate that the generat
 patch applies, list the planned files in the workflow summary, and upload the plan
 artifact. It is an informational check, not a pre-apply approval gate, and it does
 not alter source code.
-
-[funnelmetry-integration-build.yml](../.github/workflows/funnelmetry-integration-build.yml)
-then validates the exact committed dependency graph and host bindings. It is the
-post-proposal build gate and has no write or deployment permission.
 
 ## Private Funnelmetry repository access
 
@@ -122,8 +118,8 @@ Before enabling either workflow, set the Medusa repository variable
 workflows reject an empty, branch, tag, or other mutable reference.
 
 The integration packages are distributed privately through GitHub Packages under
-the `@3002tad` scope. Before `propose` or the integration build resolves them, grant
-this Medusa repository Actions read access from each package's settings. The
+the `@3002tad` scope. Before `propose` resolves them, grant this Medusa repository
+Actions read access from each package's settings. The
 committed `.npmrc` contains only the registry and `${NODE_AUTH_TOKEN}` reference;
 it never contains the token value. Publication is restricted to a reviewed
 `integration-kit-v<version>` tag in the Funnelmetry repository.
@@ -132,6 +128,6 @@ If package Actions access cannot be delegated to this repository, add the reposi
 secret `FUNNELMETRY_PACKAGE_READ_TOKEN`. Its value must be a fine-grained token with
 **Packages: Read** and access to the private Funnelmetry packages (or a classic PAT
 with `read:packages` and the repository access required by GitHub Packages). Never
-use a deploy key, a runtime signing key, or a browser write key here. The build
+use a deploy key, a runtime signing key, or a browser write key here. The `propose`
 workflow prefers this secret and falls back to `GITHUB_TOKEN` only when package
 access has explicitly been granted.

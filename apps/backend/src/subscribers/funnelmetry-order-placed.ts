@@ -1,6 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import { normalizeCurrencyCode, normalizeMajorAmount } from "@3002tad/funnelmetry-backend-integration-kit"
 import { createManagedDeliveryDispatcher } from "../funnelmetry/managed-delivery-dispatcher"
 import { normalizeOccurredAt } from "../funnelmetry/occurred-at"
 
@@ -50,6 +49,7 @@ function getDispatcher(logger: Logger) {
 
 async function enqueueOrderPlaced(orderId: string, container: MedusaContainer, logger: Logger) {
   try {
+    const { normalizeCurrencyCode, normalizeMajorAmount } = await import("@3002tad/funnelmetry-backend-integration-kit")
     const query = container.resolve(ContainerRegistrationKeys.QUERY) as Query
     const { data } = await query.graph({ entity: "order", fields: ["id", "created_at", "currency_code", "total", "items.product_id", "items.variant_id", "items.quantity", "items.unit_price", "cart.id"], filters: { id: orderId } })
     const order = data[0]

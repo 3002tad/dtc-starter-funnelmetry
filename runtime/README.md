@@ -52,6 +52,10 @@ the host loopback interface (`127.0.0.1`) is not reachable through
 server override. Copy it as a non-versioned server override, change the
 external network name when necessary, and include it after
 `runtime/docker-compose.yml` in every Compose command.
+It also sets `restart: unless-stopped` for PostgreSQL, Redis, backend, and
+storefront so a Docker daemon restart during a host upgrade brings the site
+back without a manual Compose start. Keep this policy in the server override
+when adapting the example.
 
 Create `apps/storefront/.env.local` from `runtime/storefront.env.example`, then
 set its publishable key from Medusa Admin. The storefront is available at

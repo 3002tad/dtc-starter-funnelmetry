@@ -12,7 +12,7 @@ source:
   id: medusa-reference
 
 ingest:
-  browser_url: https://ingest-test.entidi.io.vn/v1/ingress/events
+  browser_url: https://ingest.entidi.io.vn/v1/ingress/events
   backend_url: http://source-ingress:32000/v1/ingress/events
 
 auth:

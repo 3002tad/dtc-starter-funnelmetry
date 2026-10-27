@@ -35,6 +35,25 @@ bindings:
   medusa_backend:
     - medusa.order_placed
 
+# Reference-only CDC profile. This generates a reviewed, non-secret setup
+# artifact; it does not activate CDC or replace the native order subscriber.
+cdc_shadow:
+  mode: shadow_only
+  profile: reference.medusa.order_recorded_state.v1
+  source_db_url_ref: FUNNELMETRY_CDC_SHADOW_DATABASE_URL
+  source_owner: medusa-operator
+  pipeline_owner: pipeline-operator
+  snapshot_mode: no_data
+  publication: funnelmetry_cdc_shadow
+  slot: funnelmetry_cdc_shadow
+  topic_prefix: cdc_shadow_medusa
+  fact_topic: cdc_shadow_reference.order_recorded_state.v1
+  table_columns:
+    - public.order:id,deleted_at
+    - public.order_cart:id,order_id,cart_id
+    - public.cart:id,completed_at
+  rollback_target: native_order_placed
+
 # Các giá trị này là budget của Integration Kit; không chứa secret và không
 # được phép biến lỗi Funnelmetry thành lỗi checkout/order của Medusa.
 reliability:

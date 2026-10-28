@@ -54,6 +54,24 @@ cdc_shadow:
     - public.cart:id,completed_at
   rollback_target: native_order_placed
 
+# Separate product/variant/category CDC shadow profile. Initial snapshot is
+# required for existing catalog rows; this does not change order-state v1.
+cdc_catalog_shadow:
+  mode: shadow_only
+  profile: reference.medusa.catalog_master_data.v1
+  source_db_url_ref: FUNNELMETRY_CDC_CATALOG_DATABASE_URL
+  source_owner: medusa-operator
+  pipeline_owner: pipeline-operator
+  snapshot_mode: initial
+  publication: funnelmetry_cdc_catalog_shadow
+  slot: funnelmetry_cdc_catalog_shadow
+  topic_prefix: cdc_shadow_medusa_catalog
+  table_columns:
+    - public.product:id,title,handle,status,collection_id,updated_at,deleted_at
+    - public.product_variant:id,product_id,title,sku,manage_inventory,allow_backorder,updated_at,deleted_at
+    - public.product_category:id,name,parent_category_id,is_active,is_internal,updated_at,deleted_at
+    - public.product_category_product:product_id,product_category_id
+
 # Các giá trị này là budget của Integration Kit; không chứa secret và không
 # được phép biến lỗi Funnelmetry thành lỗi checkout/order của Medusa.
 reliability:

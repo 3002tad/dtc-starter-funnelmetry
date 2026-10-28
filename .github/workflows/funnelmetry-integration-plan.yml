@@ -63,6 +63,7 @@ jobs:
             --project "$GITHUB_WORKSPACE/medusa" \
             --out "$RUNNER_TEMP/funnelmetry-plan"
           node -e 'const fs = require("node:fs"); const plan = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/funnelmetry-plan/integration-plan.json", "utf8")); const source = fs.readFileSync("funnelmetry.integration.yaml", "utf8"); if (/^cdc_shadow:/m.test(source) && (plan.capabilities?.cdcReferenceState !== "SHADOW_ONLY" || plan.cdcShadowOperatorPlan?.status !== "SHADOW_ONLY_NO_RUNTIME_ACTIVATION")) throw Error("Pinned planner does not support the CDC shadow manifest; update FUNNELMETRY_PLANNER_REF")'
+          node -e 'const fs = require("node:fs"); const plan = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/funnelmetry-plan/integration-plan.json", "utf8")); const source = fs.readFileSync("funnelmetry.integration.yaml", "utf8"); if (/^cdc_catalog_shadow:/m.test(source) && plan.capabilities?.cdcCatalogState !== "SHADOW_ONLY") throw Error("Pinned planner does not support the CDC catalog manifest; update FUNNELMETRY_PLANNER_REF")'
           git apply --check --allow-empty "$RUNNER_TEMP/funnelmetry-plan/integration.patch"
           {
             echo "# Funnelmetry integration plan"

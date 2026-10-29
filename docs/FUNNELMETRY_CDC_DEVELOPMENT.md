@@ -12,6 +12,15 @@ planner commit that reports `cdcOrderV2State=SHADOW_ONLY`; the plan/propose
 workflows reject an older planner. Runtime operator setup and CDC-12 authority
 remain separate gates.
 
+Catalog stage 1 and inventory/price stage 2 now also declare distinct
+`coverage_epoch_id` values in `funnelmetry.integration.yaml`. The installer
+upgrades only its exact generated catalog v1 and inventory/price v2 profile
+files to artifact schemas v2 and v3, preserving the catalog v1 and context v2
+business contracts. The generated epochs must match the Pipeline shadow
+worker configuration. The current planner pin must be updated to a reviewed
+commit supporting those fields before CI runs; no source DB setting or native
+Medusa event binding is changed by this profile upgrade.
+
 The current manifest and generated code continue to emit `medusa.order_placed` through the native `order.placed` subscriber. Browser SDK, consent, `behavior.search_submitted`, and `cart.item_added` stay installed. CDC development first generates a separate shadow capture/profile; it does not disable the subscriber or write a second authoritative `order.placed` to the Pipeline.
 
 Source PostgreSQL logical settings, replication role, publication and network attachment require a separately identified source owner and test environment. Secrets remain outside Git and the manifest. The installer must plan and verify these requirements and provide rollback artifacts; it must not silently change the live PostgreSQL instance.

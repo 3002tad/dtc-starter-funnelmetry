@@ -84,6 +84,7 @@ cdc_catalog_shadow:
   source_owner: medusa-operator
   pipeline_owner: pipeline-operator
   snapshot_mode: initial
+  coverage_epoch_id: cdc11_catalog_epoch1
   publication: funnelmetry_cdc_catalog_shadow
   slot: funnelmetry_cdc_catalog_shadow
   topic_prefix: cdc_shadow_medusa_catalog
@@ -103,6 +104,7 @@ cdc_inventory_price_shadow:
   source_owner: medusa-operator
   pipeline_owner: pipeline-operator
   snapshot_mode: initial
+  coverage_epoch_id: cdc11_inventory_price_epoch1
   publication: funnelmetry_cdc_inventory_price_shadow_v2
   slot: funnelmetry_cdc_inventory_price_shadow_v2
   topic_prefix: cdc_shadow_medusa_inventory_price_v2

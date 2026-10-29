@@ -1,5 +1,5 @@
 {
-  "schema_version": "funnelmetry-medusa-cdc-inventory-price-shadow.v2",
+  "schema_version": "funnelmetry-medusa-cdc-inventory-price-shadow.v3",
   "generated_by": "funnelmetry-medusa-ci",
   "status": "SHADOW_ONLY",
   "source_id": "medusa-reference",
@@ -9,6 +9,7 @@
   "source_owner": "medusa-operator",
   "pipeline_owner": "pipeline-operator",
   "snapshot_mode": "initial",
+  "coverage_epoch_id": "cdc11_inventory_price_epoch1",
   "publication": "funnelmetry_cdc_inventory_price_shadow_v2",
   "slot": "funnelmetry_cdc_inventory_price_shadow_v2",
   "topic_prefix": "cdc_shadow_medusa_inventory_price_v2",

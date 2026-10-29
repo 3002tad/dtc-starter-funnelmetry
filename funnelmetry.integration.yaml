@@ -54,6 +54,27 @@ cdc_shadow:
     - public.cart:id,completed_at
   rollback_target: native_order_placed
 
+# Separate v2 candidate for a new coverage epoch. The v1 shadow profile above
+# remains historical; only one order CDC epoch may be activated by an operator.
+# This file generates a non-secret plan and does not change the live subscriber.
+cdc_order_v2_shadow:
+  mode: shadow_only
+  profile: reference.medusa.order_recorded_state.v2
+  source_db_url_ref: FUNNELMETRY_CDC_ORDER_V2_DATABASE_URL
+  source_owner: medusa-operator
+  pipeline_owner: pipeline-operator
+  snapshot_mode: initial
+  coverage_epoch_id: cdc11_order_epoch1
+  publication: funnelmetry_cdc_order_v2_e1
+  slot: funnelmetry_cdc_order_v2_e1
+  topic_prefix: cdc_shadow_medusa_order_v2_e1
+  fact_topic: cdc_shadow_reference.order_recorded_state.v2
+  table_columns:
+    - public.order:id,deleted_at
+    - public.order_cart:id,order_id,cart_id
+    - public.cart:id,completed_at
+  rollback_target: native_order_placed
+
 # Separate product/variant/category CDC shadow profile. Initial snapshot is
 # required for existing catalog rows; this does not change order-state v1.
 cdc_catalog_shadow:

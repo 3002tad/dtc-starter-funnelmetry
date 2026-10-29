@@ -57,6 +57,19 @@ storefront so a Docker daemon restart during a host upgrade brings the site
 back without a manual Compose start. Keep this policy in the server override
 when adapting the example.
 
+For a separately approved CDC shadow rehearsal, the source owner can include
+`runtime/docker-compose.cdc-shadow.example.yml` after the base and site
+overrides. Set `CDC_SOURCE_NETWORK` to the pre-created private, attachable
+Docker overlay shared with the Pipeline Connect service. The override keeps
+PostgreSQL on Medusa's default network and adds the unambiguous
+`medusa-cdc-postgres` alias on the CDC network; Connect must use that alias
+rather than `postgres`, which also names the Pipeline database. Its host port
+remains bound to `127.0.0.1`. The override does not enable logical WAL,
+create a replication role or activate a connector. Backup/restore, WAL budget,
+DB credentials and the source-owner restart plan remain separate gates under
+DEC-135. `docker compose config` checks syntax only; it does not attach a
+running container or verify network access.
+
 Create `apps/storefront/.env.local` from `runtime/storefront.env.example`, then
 set its publishable key from Medusa Admin. The storefront is available at
 `http://localhost:8000/dk`; Medusa Admin is at `http://localhost:9000/app`.

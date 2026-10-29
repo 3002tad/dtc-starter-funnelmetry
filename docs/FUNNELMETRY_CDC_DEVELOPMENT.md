@@ -25,4 +25,10 @@ The current manifest and generated code continue to emit `medusa.order_placed` t
 
 Source PostgreSQL logical settings, replication role, publication and network attachment require a separately identified source owner and test environment. Secrets remain outside Git and the manifest. The installer must plan and verify these requirements and provide rollback artifacts; it must not silently change the live PostgreSQL instance.
 
+`runtime/docker-compose.cdc-shadow.example.yml` is a source-owner network
+override template. It adds only the external `CDC_SOURCE_NETWORK` to
+PostgreSQL with alias `medusa-cdc-postgres`, retaining Medusa's default network
+and localhost host port. It is not included by default and must not be treated
+as permission to restart the deployed database or change `wal_level`.
+
 The first conformance gate compares committed database changes with the native subscriber for successful/failed/retried checkouts, `order_cart` correlation, `order_summary` versus Query Graph amount, currency, occurrence time, snapshot handling and duplicates. Only after that evidence and a cutover/rollback decision may the installer offer a CDC-primary profile that removes its own order subscriber. See the development contract at `Streaming_Pipeline/tools/medusa-ci-installer/CDC_DEVELOPMENT.md` in the workspace.

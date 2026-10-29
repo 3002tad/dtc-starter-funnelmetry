@@ -1,0 +1,17 @@
+# Optional source-owner override for a reviewed CDC shadow rehearsal.
+# Create the external attachable overlay first. Include this file after the
+# Medusa base and site-specific overrides in every Compose command.
+# This file changes network attachment only: no WAL setting, role, publication,
+# slot, source event or analytical authority is enabled here.
+services:
+  postgres:
+    networks:
+      default: {}
+      source_cdc:
+        aliases:
+          - medusa-cdc-postgres
+
+networks:
+  source_cdc:
+    external: true
+    name: ${CDC_SOURCE_NETWORK:?Set the private attachable CDC overlay name}

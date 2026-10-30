@@ -32,8 +32,7 @@ bindings:
   storefront_server:
     - behavior.search_submitted
     - cart.item_added
-  medusa_backend:
-    - medusa.order_placed
+  medusa_backend: []
 
 # Reference-only CDC profile. This generates a reviewed, non-secret setup
 # artifact; it does not activate CDC or replace the native order subscriber.
@@ -56,7 +55,8 @@ cdc_shadow:
 
 # Separate v2 candidate for a new coverage epoch. The v1 shadow profile above
 # remains historical; only one order CDC epoch may be activated by an operator.
-# This file generates a non-secret plan and does not change the live subscriber.
+# This block generates a non-secret CDC profile; cutover is declared separately
+# below and still requires deployment of the generated source branch.
 cdc_order_v2_shadow:
   mode: shadow_only
   profile: reference.medusa.order_recorded_state.v2
@@ -74,6 +74,14 @@ cdc_order_v2_shadow:
     - public.order_cart:id,order_id,cart_id
     - public.cart:id,completed_at
   rollback_target: native_order_placed
+
+# Source-owned cutover of the native order subscriber after the approved CDC
+# current-state profile became ACTIVE. Browser and storefront hooks stay.
+cdc_backend_cutover:
+  mode: replace_native_order_subscriber
+  profile: reference.medusa.order_recorded_state.v2
+  coverage_epoch_id: cdc11_order_epoch1
+  decision_ref: DEC-119/135-2026-10-30
 
 # Separate product/variant/category CDC shadow profile. Initial snapshot is
 # required for existing catalog rows; this does not change order-state v1.

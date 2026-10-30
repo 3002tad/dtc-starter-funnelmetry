@@ -111,6 +111,16 @@ persisted-cart hooks; `medusa_backend` explicitly enables the authoritative Medu
 order hook. The planner must reject missing/unknown required bindings instead of
 silently injecting undeclared tracking behavior.
 
+For the approved Medusa reference CDC v2 cutover, `medusa_backend: []` is valid
+only with an explicit `cdc_backend_cutover` block matching the reviewed order
+coverage epoch and DEC reference. The pinned planner then removes only the
+installer-owned `order.placed` subscriber and its managed dispatcher, plus the
+backend app's integration-kit dependency. Browser SDK and storefront search/cart
+hooks remain installed; the storefront retains its integration-kit dependency.
+The patch is generated and applied on the pre-created integration branch by
+the same workflows. The planner reports runtime conformance as unverified;
+Pipeline quality and active profile checks are separate cutover evidence.
+
 ## Initial activation prerequisite
 
 Before enabling either workflow, set the Medusa repository variable

@@ -7,30 +7,29 @@ const source = readFileSync(manifestPath, 'utf8')
 const declared = key => new RegExp(`^${key}:`, 'm').test(source)
 const requireStatus = (condition, message) => { if (!condition) throw Error(message) }
 
-if (declared('cdc_shadow')) requireStatus(
-  plan.capabilities?.cdcReferenceState === 'SHADOW_ONLY' &&
-  plan.cdcShadowOperatorPlan?.status === 'SHADOW_ONLY_NO_RUNTIME_ACTIVATION',
-  'Pinned planner does not support CDC shadow; update FUNNELMETRY_PLANNER_REF',
+requireStatus(!declared('cdc_shadow') && declared('cdc_backend_cutover') &&
+  declared('cdc_order_v2_shadow') && declared('cdc_catalog_shadow') &&
+  declared('cdc_inventory_price_shadow'),
+  'CDC primary manifest must declare all three CDC profiles and no v1 shadow',
 )
-const cutover = declared('cdc_backend_cutover')
-if (declared('cdc_order_v2_shadow')) requireStatus(
-  plan.capabilities?.cdcOrderV2State === (cutover
-    ? 'CUTOVER_DECLARED_RUNTIME_UNVERIFIED' : 'SHADOW_ONLY') &&
-  plan.cdcOrderV2OperatorPlan?.status === 'SHADOW_ONLY_NO_RUNTIME_ACTIVATION',
-  'Pinned planner does not support this CDC order v2 mode; update FUNNELMETRY_PLANNER_REF',
+requireStatus(
+  plan.capabilities?.cdcReferenceState === 'RETIRED_V1' &&
+  plan.capabilities?.cdcOrderV2State === 'CDC_PRIMARY_REFERENCE' &&
+  plan.cdcOrderV2OperatorPlan?.status === 'CDC_REFERENCE_CONFIGURED',
+  'Pinned planner does not support CDC primary; update FUNNELMETRY_PLANNER_REF',
 )
-if (cutover) requireStatus(
+requireStatus(
   plan.capabilities?.orderPlaced === 'DISABLED' &&
-  ['cdc-backend-cutover-ready', 'cdc-backend-cutover-applied'].includes(plan.integrationState) &&
+  ['cdc-primary-cleanup-ready', 'cdc-primary', 'absent', 'exact'].includes(plan.integrationState) &&
   plan.manifest?.cdcBackendCutover?.profile === 'reference.medusa.order_recorded_state.v2',
-  'Pinned planner does not support the reviewed backend cutover manifest',
+  'Pinned planner does not support the approved CDC primary contract',
 )
-if (declared('cdc_catalog_shadow')) requireStatus(
-  plan.capabilities?.cdcCatalogState === 'SHADOW_ONLY',
+requireStatus(
+  plan.capabilities?.cdcCatalogState === 'CDC_PRIMARY_REFERENCE',
   'Pinned planner does not support CDC catalog',
 )
-if (declared('cdc_inventory_price_shadow')) requireStatus(
-  plan.capabilities?.cdcInventoryPriceState === 'SHADOW_ONLY',
+requireStatus(
+  plan.capabilities?.cdcInventoryPriceState === 'CDC_PRIMARY_REFERENCE',
   'Pinned planner does not support CDC inventory/price',
 )
 if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT,

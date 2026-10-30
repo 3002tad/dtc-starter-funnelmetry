@@ -53,12 +53,8 @@ services:
       JWT_SECRET: local-development-only-jwt-secret
       COOKIE_SECRET: local-development-only-cookie-secret
       MEDUSA_COOKIE_SECURE: "false"
-      FUNNELMETRY_INGEST_URL: ${FUNNELMETRY_INGEST_URL:-http://host.docker.internal:32000/v1/ingress/events}
-      FUNNELMETRY_BACKEND_SIGNING_KEY: ${FUNNELMETRY_BACKEND_SIGNING_KEY:-}
     ports:
       - "127.0.0.1:9000:9000"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
   storefront:
     build:

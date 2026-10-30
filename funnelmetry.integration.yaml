@@ -34,29 +34,8 @@ bindings:
     - cart.item_added
   medusa_backend: []
 
-# Reference-only CDC profile. This generates a reviewed, non-secret setup
-# artifact; it does not activate CDC or replace the native order subscriber.
-cdc_shadow:
-  mode: shadow_only
-  profile: reference.medusa.order_recorded_state.v1
-  source_db_url_ref: FUNNELMETRY_CDC_SHADOW_DATABASE_URL
-  source_owner: medusa-operator
-  pipeline_owner: pipeline-operator
-  snapshot_mode: no_data
-  publication: funnelmetry_cdc_shadow
-  slot: funnelmetry_cdc_shadow
-  topic_prefix: cdc_shadow_medusa
-  fact_topic: cdc_shadow_reference.order_recorded_state.v1
-  table_columns:
-    - public.order:id,deleted_at
-    - public.order_cart:id,order_id,cart_id
-    - public.cart:id,completed_at
-  rollback_target: native_order_placed
-
-# Separate v2 candidate for a new coverage epoch. The v1 shadow profile above
-# remains historical; only one order CDC epoch may be activated by an operator.
-# This block generates a non-secret CDC profile; cutover is declared separately
-# below and still requires deployment of the generated source branch.
+# CDC is the reference source for order current state. The source owner still
+# controls replication roles, slots and connector runtime separately.
 cdc_order_v2_shadow:
   mode: shadow_only
   profile: reference.medusa.order_recorded_state.v2
@@ -73,7 +52,6 @@ cdc_order_v2_shadow:
     - public.order:id,deleted_at
     - public.order_cart:id,order_id,cart_id
     - public.cart:id,completed_at
-  rollback_target: native_order_placed
 
 # Source-owned cutover of the native order subscriber after the approved CDC
 # current-state profile became ACTIVE. Browser and storefront hooks stay.
@@ -83,8 +61,7 @@ cdc_backend_cutover:
   coverage_epoch_id: cdc11_order_epoch1
   decision_ref: DEC-119/135-2026-10-30
 
-# Separate product/variant/category CDC shadow profile. Initial snapshot is
-# required for existing catalog rows; this does not change order-state v1.
+# Product/variant/category CDC profile. Initial snapshot covered existing rows.
 cdc_catalog_shadow:
   mode: shadow_only
   profile: reference.medusa.catalog_master_data.v1
@@ -103,8 +80,7 @@ cdc_catalog_shadow:
     - public.product_category_product:product_id,product_category_id
 
 # Separate inventory/price context from order-state and catalog v1. This
-# stage-2 profile is a schema-checked shadow candidate, not an availability or
-# storefront display-price claim. Operator owns replication and runtime setup.
+# stage-2 profile does not claim every availability or display-price shape.
 cdc_inventory_price_shadow:
   mode: shadow_only
   profile: reference.medusa.inventory_price_context.v2
@@ -134,8 +110,7 @@ cdc_inventory_price_shadow:
     - public.region:id,currency_code,deleted_at
     - public.currency:code,decimal_digits,deleted_at
 
-# Các giá trị này là budget của Integration Kit; không chứa secret và không
-# được phép biến lỗi Funnelmetry thành lỗi checkout/order của Medusa.
+# Budget for storefront behavioral delivery; no backend order message producer.
 reliability:
   failure_mode: fail_open
   timeout_ms: 800

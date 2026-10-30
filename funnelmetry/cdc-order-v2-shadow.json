@@ -21,8 +21,6 @@
     "public.order_cart:id,order_id,cart_id",
     "public.cart:id,completed_at"
   ],
-  "order_fact_authority": "medusa.order_placed",
-  "canonical_live_event": "order.placed",
-  "rollback_target": "native_order_placed",
+  "analytical_authority": "reference.medusa.order_recorded_state.v2",
   "runtime_activation": "OPERATOR_CONTROLLED_SEPARATE_FROM_INSTALLER"
 }

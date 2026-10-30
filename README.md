@@ -40,6 +40,17 @@
 
 # Medusa DTC Starter
 
+## Funnelmetry reference integration
+
+`funnelmetry.integration.yaml` drives the pinned Pipeline CI installer on an
+existing non-main integration branch. The current reference uses PostgreSQL CDC
+profiles for order current state, catalog and inventory/price context. The
+installer does not generate a Medusa backend order subscriber or native order
+message sender. Browser SDK and storefront server hooks still deliver behavioral
+events through Source Ingress. Logical replication and CDC consumers are
+operator-managed outside this Medusa checkout; see the Pipeline CDC installer
+runbook and Backbone DEC-142 for the active boundary.
+
 A production-ready monorepo starter for direct-to-consumer ecommerce stores powered by Medusa and Next.js. Includes a fully featured storefront with product browsing, cart, checkout, customer accounts, and order management.
 
 ## Features

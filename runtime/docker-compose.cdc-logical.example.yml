@@ -1,0 +1,13 @@
+# Source-owner-only CDC shadow runtime override. Include after the Medusa base,
+# site-specific override and docker-compose.cdc-shadow.example.yml.
+# CDC_MAX_SLOT_WAL_KEEP_MB is deliberately required and has no default: size it
+# from the reviewed workload/outage budget before restarting PostgreSQL.
+# This changes no Medusa table, event, subscriber or analytical binding.
+services:
+  postgres:
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_slot_wal_keep_size=${CDC_MAX_SLOT_WAL_KEEP_MB:?Set a reviewed positive MiB cap}MB

@@ -31,4 +31,23 @@ PostgreSQL with alias `medusa-cdc-postgres`, retaining Medusa's default network
 and localhost host port. It is not included by default and must not be treated
 as permission to restart the deployed database or change `wal_level`.
 
+`runtime/docker-compose.cdc-logical.example.yml` is a separate, optional
+source-owner command override for target-topology shadow testing. It requires
+an explicit positive MiB WAL cap rather than carrying a clone/default value.
+`runtime/check-cdc-source-config.mjs` validates the rendered command,
+network alias, loopback-only port and persistent volume before rollout; it
+does not create a role, publication, slot or connector. The source backup and
+isolated restore test, runtime cap and controlled restart remain operator
+gates. See `runtime/README.md` for the exact file order and preflight command.
+
+On the KLTN shadow VPS, the source owner approved a controlled PostgreSQL
+restart on 2026-10-30. The network and logical-WAL overrides were copied
+outside the live checkout, the rendered-config guard passed with a provisional
+1024 MiB cap, and PostgreSQL restarted healthy with `wal_level=logical` and
+`max_slot_wal_keep_size=1GB`. The existing `postgres_data` volume, loopback
+port and Medusa default network remained; the backend health endpoint returned
+200 and product count remained 104. This cap is a **shadow operating limit**,
+not a flash-sale/production capacity claim. No role, publication, slot or
+connector has been created and no analytical authority has changed.
+
 The first conformance gate compares committed database changes with the native subscriber for successful/failed/retried checkouts, `order_cart` correlation, `order_summary` versus Query Graph amount, currency, occurrence time, snapshot handling and duplicates. Only after that evidence and a cutover/rollback decision may the installer offer a CDC-primary profile that removes its own order subscriber. See the development contract at `Streaming_Pipeline/tools/medusa-ci-installer/CDC_DEVELOPMENT.md` in the workspace.

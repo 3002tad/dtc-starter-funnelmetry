@@ -8,6 +8,9 @@ on:
       - feature/cdc-medusa-v1
     paths:
       - funnelmetry.integration.yaml
+      - runtime/check-cdc-source-config.mjs
+      - runtime/check-cdc-source-config.test.mjs
+      - runtime/docker-compose.cdc-logical.example.yml
       - .github/workflows/funnelmetry-integration-plan.yml
 
 # This read-only workflow records the patch implied by the manifest. It does not
@@ -53,6 +56,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+
+      - name: Validate CDC source runtime guard
+        working-directory: medusa
+        run: node --test runtime/check-cdc-source-config.test.mjs
 
       - name: Generate, check, and record manifest-driven patch
         working-directory: medusa

@@ -70,6 +70,35 @@ DB credentials and the source-owner restart plan remain separate gates under
 DEC-135. `docker compose config` checks syntax only; it does not attach a
 running container or verify network access.
 
+For a separately reviewed logical-WAL shadow rollout, add
+`runtime/docker-compose.cdc-logical.example.yml` **after** the network
+override. It changes only the PostgreSQL command and requires the source owner
+to provide a finite, positive `CDC_MAX_SLOT_WAL_KEEP_MB`; the repository does
+not choose a WAL retention budget. The current `max_replication_slots` and
+`max_wal_senders` must be checked against the three CDC profiles before use.
+Run the rendered-config guard before recreating PostgreSQL:
+
+```bash
+set -o pipefail
+export CDC_SOURCE_NETWORK=<private-overlay-name>
+export CDC_MAX_SLOT_WAL_KEEP_MB=<reviewed-positive-MiB-cap>
+docker compose --env-file <site-env> \
+  -f runtime/docker-compose.yml -f <site-override> \
+  -f runtime/docker-compose.cdc-shadow.example.yml \
+  -f runtime/docker-compose.cdc-logical.example.yml \
+  config --format json | node runtime/check-cdc-source-config.mjs
+```
+
+The guard checks the finite cap, exact PostgreSQL command, private network
+alias, loopback port and persisted volume without printing the rendered secrets.
+An accepted config does not authorize a restart: first record the source-owner
+approval, backup/restore result, workload-based WAL budget, health checks and
+rollback window. Then use the **same four Compose files** for a controlled
+`up -d --no-deps --no-build postgres`, verify `SHOW wal_level` and
+`SHOW max_slot_wal_keep_size`, confirm Medusa health and the existing volume,
+and only then create the three narrow roles/publications/slots. Keep the
+native order subscriber and `catalog-sync` authoritative during shadow.
+
 Create `apps/storefront/.env.local` from `runtime/storefront.env.example`, then
 set its publishable key from Medusa Admin. The storefront is available at
 `http://localhost:8000/dk`; Medusa Admin is at `http://localhost:9000/app`.

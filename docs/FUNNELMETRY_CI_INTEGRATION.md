@@ -1,105 +1,19 @@
 # Funnelmetry CI integration
 
-This repository has two intentionally separate integration workflows. The manifest
-is the source of truth; neither workflow merges, deploys, or receives runtime
-integration secrets.
+Medusa `main` giữ source gốc. Hai workflow trong `.github/workflows/` là bộ khởi tạo cho **nhánh tích hợp đã được tạo trước** (`funnelmetry/integration/<name>`; nhánh CDC hiện tại `feature/cdc-medusa-v1` cũng được chấp nhận). Workflow không chạy khi push vào `main`, không tạo nhánh, merge hay deploy. `funnelmetry.integration.yaml` trên nhánh tích hợp là cấu hình đầu vào cho installer được ghim bằng repository variable `FUNNELMETRY_PLANNER_REF` (SHA 40 ký tự).
 
-## What runs in GitHub Actions
+## Luồng CI
 
-The push-triggered [funnelmetry-integration-propose.yml](../.github/workflows/funnelmetry-integration-propose.yml)
-runs when `funnelmetry.integration.yaml` changes on a pre-created
-`funnelmetry/integration/<name>` branch. That manifest commit is the source owner's
-authorization to apply the generated patch only to that same branch. It validates the
-pinned Medusa version, generates `integration-plan.json` and `integration.patch`
-outside the checkout, checks the generated-file allowlist, resolves private packages,
-builds/type-checks the host, then commits to and pushes only that target branch. It
-uploads an audit artifact; a rerun with an empty planner patch ends as `no_changes`.
+1. Source owner tạo nhánh tích hợp từ revision Medusa muốn dùng và commit manifest `funnelmetry.io/v2` trên **nhánh đó**. Manifest V1 mẫu còn trên `main` không phải cấu hình CDC để chạy installer mới.
+2. [Plan](../.github/workflows/funnelmetry-integration-plan.yml) đọc manifest, gọi planner ở chế độ read-only, kiểm tra contract CDC/Browser SDK và patch, rồi tải artifact/bản tóm tắt thay đổi. Plan chỉ giúp theo dõi, không phải bước duyệt trước khi sinh code.
+3. [Propose](../.github/workflows/funnelmetry-integration-propose.yml) tạo patch từ cùng manifest, giới hạn các file installer được phép quản lý, áp patch trên đúng nhánh tích hợp, cập nhật lockfile bằng pnpm, build backend/type-check storefront và commit/push lại nhánh đó. Build từ nhánh tích hợp đã ghim là đầu vào của quy trình deploy Medusa riêng.
 
-[funnelmetry-integration-plan.yml](../.github/workflows/funnelmetry-integration-plan.yml)
-runs read-only when the manifest is pushed on the integration branch. It uses the
-same pinned planner to record `integration-plan.json`, validate that the generated
-patch applies, list the planned files in the workflow summary, and upload the plan
-artifact. It is an informational check, not a pre-apply approval gate, and it does
-not alter source code.
+Guard [validate-funnelmetry-plan.mjs](../.github/scripts/validate-funnelmetry-plan.mjs) yêu cầu ba profile CDC order v2/catalog/inventory-price, `medusa_backend: []`, `orderPlaced=DISABLED` và behavioral bindings Browser SDK/storefront. Nó từ chối planner cũ hoặc plan không còn đúng contract. Trạng thái kỹ thuật `shadow_only` trong tên/cấu hình CDC hiện hữu được giữ để tương thích slot/topic/epoch; authority phân tích là CDC current-state v2 theo Backbone DEC-142. Browser SDK và storefront search/cart tiếp tục dùng Source Ingress/Event Feed cho đến khi Gateway có cutover riêng.
 
-## Private Funnelmetry repository access
+## Quyền và phạm vi
 
-Because `3002tad/Funnelmetry` is private, configure the Medusa repository secret
-`FUNNELMETRY_PLANNER_READ_TOKEN` before running the workflow. Use a fine-grained
-personal access token or GitHub App installation token with only **Contents: Read**
-on the Funnelmetry repository; do not grant write, workflow, package, organization
-or broad account access. The token is consumed only by the second checkout step and
-must never be put in `funnelmetry.integration.yaml`.
+- Planner checkout dùng `FUNNELMETRY_PLANNER_READ_TOKEN` với quyền đọc repo Pipeline. Package install dùng `FUNNELMETRY_PACKAGE_READ_TOKEN` nếu cần, nếu không dùng `GITHUB_TOKEN` với quyền package phù hợp. Secret không đặt trong manifest hoặc artifact.
+- Propose chỉ có `contents: write` trong job cần commit; branch guard chặn `main`. Branch protection và quyền chỉnh sửa workflow cần được quản lý ở GitHub.
+- CI không thiết lập PostgreSQL logical replication, publication/slot, Kafka Connect, CDC quality lease hoặc runtime secrets. Operator quản lý các phần đó theo [CDC integration](FUNNELMETRY_CDC_DEVELOPMENT.md) và tài liệu Pipeline.
 
-GitHub does not expose repository secrets to pull requests from forks, so a fork PR
-will not run the private planner checkout. Do not replace `pull_request` with
-`pull_request_target` just to make the secret available.
-
-The automatic apply workflow runs on a direct push and therefore executes the workflow
-definition from that integration branch. Enable it only for trusted source owners or
-maintainers who are allowed to change the workflow; do not use it as a workflow for
-untrusted external contributions. Branch protection and a least-privilege planner token
-remain required even though the token only reads the private Funnelmetry repository.
-
-## Review and release flow
-
-1. Create `funnelmetry/integration/<name>` from the chosen host base branch, then
-   change and push the manifest on that trusted integration branch.
-2. **Funnelmetry integration plan** reads the YAML and records/checks the exact
-   patch implied by it. In parallel, **Funnelmetry integration propose** regenerates
-   that patch, validates its ownership allowlist, injects it, validates the host,
-   then commits and pushes only to the same pre-created branch. Neither workflow
-   creates a branch, and plan is not an approval gate for propose.
-3. Use the integration branch as the source of the normal Medusa release/deploy flow.
-   A source fingerprint/layout mismatch must stop the workflow; it must not apply an
-   old patch opportunistically.
-4. The proposal workflow resolves the pinned private packages, installs with
-   `--frozen-lockfile`, builds the Medusa backend, type-checks the storefront binding,
-   and only then commits the updated `pnpm-lock.yaml`. A full Next.js production build
-   also needs a running, seeded Medusa API because the DTC starter generates catalog
-   pages from live data; that runtime-level check belongs to the next integration gate.
-   The browser write key is injected at storefront build time; the backend signing
-   key is injected only into the backend runtime. Neither is a package credential.
-
-Protect `main` and other important branches with a GitHub ruleset/branch protection.
-`contents: write` is a repository-level token permission; workflow input checks are
-not a substitute for repository-side protection.
-
-## Technical integration rollout (optional experiment)
-
-This is a technical canary/blue-green comparison, not an A/B testing platform for
-marketing or a causal claim about conversion. Deploy a control build without the
-binding and a treatment build with it, assign traffic persistently (for example by
-cookie or edge), and keep business logic identical. Compare host p95 latency,
-errors, CPU/RAM, bandwidth, event/receipt/duplicate/retry/loss, and checkout/order
-success. The control build cannot establish funnel-behavior causality because it
-does not emit Browser SDK data. If both variants emit to Funnelmetry, isolate their
-analysis with an approved source partition or experiment label before aggregating.
-
-`ingest.url` is intentionally a placeholder until an environment-specific ingress
-endpoint exists. The generated binding embeds this non-secret endpoint and reads
-the key names declared by `browser_write_key_ref` and `backend_signing_key_ref`.
-For the browser, the configured write-key name is exposed with the `NEXT_PUBLIC_`
-prefix; the backend signing key is never exposed to the storefront. Do not put
-secret values in the manifest.
-
-## Initial activation prerequisite
-
-Before enabling either workflow, set the Medusa repository variable
-`FUNNELMETRY_PLANNER_REF` to the reviewed 40-character Funnelmetry commit SHA. Both
-workflows reject an empty, branch, tag, or other mutable reference.
-
-The integration packages are distributed privately through GitHub Packages under
-the `@3002tad` scope. Before `propose` resolves them, grant this Medusa repository
-Actions read access from each package's settings. The committed `.npmrc` contains
-only the registry and `${NODE_AUTH_TOKEN}` reference; it never contains the token
-value. Publication is restricted to a reviewed `integration-kit-v<version>` tag in
-the Funnelmetry repository.
-
-If package Actions access cannot be delegated to this repository, add the repository
-secret `FUNNELMETRY_PACKAGE_READ_TOKEN`. Its value must be a fine-grained token with
-**Packages: Read** and access to the private Funnelmetry packages (or a classic PAT
-with `read:packages` and the repository access required by GitHub Packages). Never
-use a deploy key, a runtime signing key, or a browser write key here. The `propose`
-workflow prefers this secret and falls back to `GITHUB_TOKEN` only when package
-access has explicitly been granted.
+Để tích hợp một source checkout mới, kiểm tra Medusa/Next version, pin installer đã duyệt, cấu hình manifest V2 và chạy Plan/Propose trên nhánh riêng. **Checkout `main` hiện thiếu `apps/storefront/src/modules/store/components/store-search/index.tsx`**, một trong năm file semantic-hook mà installer V2 yêu cầu; planner sẽ từ chối patch nếu nhánh mới chỉ lấy source từ `main`. Nhánh tích hợp hiện hành có đủ file này và đã qua kiểm tra planner. Cho lần tạo nhánh mới, dùng một base storefront tương thích hoặc mở rộng installer để sinh hook trên đúng layout của `main` trước khi chạy CI. Không copy code Funnelmetry đã sinh vào Medusa `main`.

@@ -5,9 +5,12 @@ on:
   push:
     branches:
       - "funnelmetry/integration/**"
+      - feature/cdc-medusa-v1
     paths:
       - funnelmetry.integration.yaml
       - .github/workflows/funnelmetry-integration-propose.yml
+      - .github/scripts/validate-funnelmetry-plan.mjs
+      - .github/scripts/validate-funnelmetry-plan.test.mjs
 
 # A manifest commit is the source owner's authorization to update that same
 # integration branch. This workflow never creates branches, merges, deploys,
@@ -28,8 +31,8 @@ jobs:
           TARGET_REF: ${{ github.ref_name }}
           PLANNER_REF: ${{ vars.FUNNELMETRY_PLANNER_REF }}
         run: |
-          if [[ ! "$TARGET_REF" =~ ^funnelmetry/integration/[a-z0-9][a-z0-9._-]{0,80}$ ]]; then
-            echo "The current branch must be a pre-created branch under funnelmetry/integration/" >&2
+          if [[ "$TARGET_REF" != "feature/cdc-medusa-v1" && ! "$TARGET_REF" =~ ^funnelmetry/integration/[a-z0-9][a-z0-9._-]{0,80}$ ]]; then
+            echo "The current branch must be pre-created under funnelmetry/integration/ or exactly feature/cdc-medusa-v1" >&2
             exit 1
           fi
           if [[ ! "$PLANNER_REF" =~ ^[0-9a-f]{40}$ ]]; then
@@ -75,6 +78,10 @@ jobs:
           corepack enable
           corepack prepare pnpm@10.11.1 --activate
 
+      - name: Validate CI plan guard
+        working-directory: medusa
+        run: node --test .github/scripts/validate-funnelmetry-plan.test.mjs
+
       - name: Generate patch from integration manifest
         run: |
           mkdir -p "$RUNNER_TEMP/funnelmetry-plan"
@@ -86,7 +93,8 @@ jobs:
       - name: Read plan metadata
         id: plan_metadata
         run: |
-          node -e 'const fs = require("node:fs"); const plan = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/funnelmetry-plan/integration-plan.json", "utf8")); fs.appendFileSync(process.env.GITHUB_OUTPUT, "source_fingerprint=" + plan.sourceFingerprint + "\\nchange_count=" + plan.changes.length + "\\n")'
+          node medusa/.github/scripts/validate-funnelmetry-plan.mjs \
+            "$RUNNER_TEMP/funnelmetry-plan/integration-plan.json" medusa/funnelmetry.integration.yaml
 
       - name: Validate generated-file allowlist
         working-directory: medusa
@@ -94,7 +102,8 @@ jobs:
           git apply --check --allow-empty "$RUNNER_TEMP/funnelmetry-plan/integration.patch"
           while IFS= read -r file; do
             case "$file" in
-              "package.json" | "apps/backend/package.json" | "apps/backend/src/funnelmetry/managed-delivery-dispatcher.ts" | "apps/backend/src/funnelmetry/occurred-at.ts" | "apps/backend/src/subscribers/funnelmetry-order-placed.ts" | "apps/storefront/package.json" | "apps/storefront/tsconfig.json" | "apps/storefront/src/app/layout.tsx" | "apps/storefront/src/app/[countryCode]/(main)/products/[handle]/page.tsx" | "apps/storefront/src/modules/products/components/product-actions/index.tsx" | "apps/storefront/src/app/[countryCode]/(checkout)/checkout/page.tsx" | "apps/storefront/src/lib/data/cart.ts" | "apps/storefront/src/modules/store/components/store-search/index.tsx" | "apps/storefront/src/app/[countryCode]/(main)/store/page.tsx" | "apps/storefront/src/modules/store/templates/index.tsx" | "apps/storefront/src/modules/store/templates/paginated-products.tsx" | "apps/storefront/src/funnelmetry/client.tsx" | "apps/storefront/src/funnelmetry/consent-notice.tsx" | "apps/storefront/src/funnelmetry/server-delivery.ts") ;;
+              "funnelmetry/cdc-inventory-price-shadow.json" | "funnelmetry/cdc-order-v2-shadow.json") ;;
+              "package.json" | "funnelmetry/cdc-reference-shadow.json" | "funnelmetry/cdc-catalog-shadow.json" | "apps/backend/package.json" | "apps/backend/src/funnelmetry/managed-delivery-dispatcher.ts" | "apps/backend/src/funnelmetry/occurred-at.ts" | "apps/backend/src/subscribers/funnelmetry-order-placed.ts" | "apps/storefront/package.json" | "apps/storefront/tsconfig.json" | "apps/storefront/src/app/layout.tsx" | "apps/storefront/src/app/[countryCode]/(main)/products/[handle]/page.tsx" | "apps/storefront/src/modules/products/components/product-actions/index.tsx" | "apps/storefront/src/app/[countryCode]/(checkout)/checkout/page.tsx" | "apps/storefront/src/lib/data/cart.ts" | "apps/storefront/src/modules/store/components/store-search/index.tsx" | "apps/storefront/src/app/[countryCode]/(main)/store/page.tsx" | "apps/storefront/src/modules/store/templates/index.tsx" | "apps/storefront/src/modules/store/templates/paginated-products.tsx" | "apps/storefront/src/funnelmetry/client.tsx" | "apps/storefront/src/funnelmetry/consent-notice.tsx" | "apps/storefront/src/funnelmetry/server-delivery.ts") ;;
               *) echo "Generated patch changes a non-owned file: $file" >&2; exit 1 ;;
             esac
           done < <(git apply --numstat --allow-empty "$RUNNER_TEMP/funnelmetry-plan/integration.patch" | cut -f3)

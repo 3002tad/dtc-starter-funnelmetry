@@ -5,9 +5,15 @@ on:
   push:
     branches:
       - "funnelmetry/integration/**"
+      - feature/cdc-medusa-v1
     paths:
       - funnelmetry.integration.yaml
+      - runtime/check-cdc-source-config.mjs
+      - runtime/check-cdc-source-config.test.mjs
+      - runtime/docker-compose.cdc-logical.example.yml
       - .github/workflows/funnelmetry-integration-plan.yml
+      - .github/scripts/validate-funnelmetry-plan.mjs
+      - .github/scripts/validate-funnelmetry-plan.test.mjs
 
 # This read-only workflow records the patch implied by the manifest. It does not
 # gate or alter the propose workflow, create branches, merge, or deploy.
@@ -30,8 +36,8 @@ jobs:
           TARGET_REF: ${{ github.ref_name }}
           PLANNER_REF: ${{ vars.FUNNELMETRY_PLANNER_REF }}
         run: |
-          if [[ ! "$TARGET_REF" =~ ^funnelmetry/integration/[a-z0-9][a-z0-9._-]{0,80}$ ]]; then
-            echo "The current branch must be a pre-created branch under funnelmetry/integration/" >&2
+          if [[ "$TARGET_REF" != "feature/cdc-medusa-v1" && ! "$TARGET_REF" =~ ^funnelmetry/integration/[a-z0-9][a-z0-9._-]{0,80}$ ]]; then
+            echo "The current branch must be pre-created under funnelmetry/integration/ or exactly feature/cdc-medusa-v1" >&2
             exit 1
           fi
           if [[ ! "$PLANNER_REF" =~ ^[0-9a-f]{40}$ ]]; then
@@ -53,6 +59,19 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Validate CI plan guard
+        working-directory: medusa
+        run: node --test .github/scripts/validate-funnelmetry-plan.test.mjs
+
+      - name: Validate CDC source runtime guard when installed
+        working-directory: medusa
+        run: |
+          if [[ -e runtime/check-cdc-source-config.mjs || -e runtime/check-cdc-source-config.test.mjs ]]; then
+            test -f runtime/check-cdc-source-config.mjs
+            test -f runtime/check-cdc-source-config.test.mjs
+            node --test runtime/check-cdc-source-config.test.mjs
+          fi
+
       - name: Generate, check, and record manifest-driven patch
         working-directory: medusa
         run: |
@@ -61,6 +80,8 @@ jobs:
             --config "$GITHUB_WORKSPACE/medusa/funnelmetry.integration.yaml" \
             --project "$GITHUB_WORKSPACE/medusa" \
             --out "$RUNNER_TEMP/funnelmetry-plan"
+          node .github/scripts/validate-funnelmetry-plan.mjs \
+            "$RUNNER_TEMP/funnelmetry-plan/integration-plan.json" funnelmetry.integration.yaml
           git apply --check --allow-empty "$RUNNER_TEMP/funnelmetry-plan/integration.patch"
           {
             echo "# Funnelmetry integration plan"

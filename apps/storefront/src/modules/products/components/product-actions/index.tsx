@@ -1,6 +1,7 @@
 "use client"
 
 import { addToCart } from "@lib/data/cart"
+import { trackCartContext } from "@funnelmetry/client"
 import { useIntersection } from "@lib/hooks/use-in-view"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@modules/common/components/ui"
@@ -126,11 +127,12 @@ export default function ProductActions({
 
     setIsAdding(true)
 
-    await addToCart({
+    const cartId = await addToCart({
       variantId: selectedVariant.id,
       quantity: 1,
       countryCode,
     })
+    if (cartId) void trackCartContext(cartId)
 
     setIsAdding(false)
   }

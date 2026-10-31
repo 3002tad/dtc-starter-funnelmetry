@@ -1,0 +1,68 @@
+"use client"
+
+import { FormEvent, useEffect, useState } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { trackSearchQuery } from "@funnelmetry/client"
+
+type StoreSearchProps = {
+  initialQuery?: string
+}
+
+function createSearchInteractionId() {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return `search:${crypto.randomUUID()}`
+    }
+  } catch {
+    // Tracking identity generation must not block navigation.
+  }
+  return `search:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 14)}`
+}
+
+const StoreSearch = ({ initialQuery = "" }: StoreSearchProps) => {
+  const [query, setQuery] = useState(initialQuery)
+  const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => setQuery(initialQuery), [initialQuery])
+
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const normalizedQuery = query.trim()
+
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("page")
+    params.delete("fm_search_interaction_id")
+    if (normalizedQuery) {
+      params.set("q", normalizedQuery)
+      void trackSearchQuery(query, createSearchInteractionId())
+    } else {
+      params.delete("q")
+    }
+
+    const queryString = params.toString()
+    router.push(queryString ? `${pathname}?${queryString}` : pathname)
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="flex w-full max-w-xl gap-2" role="search">
+      <label className="sr-only" htmlFor="store-search">Search products</label>
+      <input
+        id="store-search"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Search the collection"
+        className="min-w-0 flex-1 rounded-full border border-ui-border-base bg-white px-4 py-2 text-sm text-ui-fg-base outline-none transition focus:border-ui-fg-base"
+      />
+      <button
+        type="submit"
+        className="rounded-full bg-ui-fg-base px-5 py-2 text-sm font-semibold text-ui-bg-base transition hover:opacity-90"
+      >
+        Search
+      </button>
+    </form>
+  )
+}
+
+export default StoreSearch

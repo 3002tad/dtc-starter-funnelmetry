@@ -155,6 +155,7 @@ export async function addToCart({
       revalidateTag(fulfillmentCacheTag)
     })
     .catch(medusaError)
+  return cart.id
 }
 
 export async function updateLineItem({

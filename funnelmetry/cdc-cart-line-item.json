@@ -1,0 +1,22 @@
+{
+  "schema_version": "funnelmetry-medusa-cdc-cart-line-item.v1",
+  "generated_by": "funnelmetry-medusa-ci",
+  "status": "ACTIVE_REFERENCE",
+  "source_id": "medusa-reference",
+  "medusa_version": "2.19.0",
+  "cdc_contract": "reference.medusa.cart_line_item_added.v1",
+  "snapshot_mode": "initial",
+  "baseline_policy": "SNAPSHOT_NEVER_EMITS_CART_ITEM_ADDED",
+  "quantity_policy": "INSERT_OR_POSITIVE_DELTA_ONLY",
+  "coverage_epoch_id": "cdc_cart_epoch1",
+  "source_db_url_ref": "FUNNELMETRY_CDC_CART_DATABASE_URL",
+  "source_owner": "medusa-operator",
+  "pipeline_owner": "pipeline-operator",
+  "publication": "funnelmetry_cdc_cart_line_item_v1",
+  "slot": "funnelmetry_cdc_cart_line_item_v1",
+  "topic_prefix": "cdc_medusa_cart_line_item_v1",
+  "table_columns": [
+    "public.cart_line_item:id,cart_id,product_id,variant_id,quantity,created_at,updated_at,deleted_at"
+  ],
+  "runtime_activation": "OPERATOR_CONTROLLED_SEPARATE_FROM_INSTALLER"
+}

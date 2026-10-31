@@ -4,6 +4,7 @@ import { OptionValueIds } from "@lib/util/product-option-filters"
 import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 import RefinementList from "@modules/store/components/refinement-list"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import StoreSearch from "@modules/store/components/store-search"
 
 import PaginatedProducts from "./paginated-products"
 
@@ -12,11 +13,13 @@ const StoreTemplate = ({
   page,
   countryCode,
   optionValueIds,
+  query,
 }: {
   sortBy?: SortOptions
   page?: string
   countryCode: string
   optionValueIds?: OptionValueIds
+  query?: string
 }) => {
   const pageNumber = page ? parseInt(page) : 1
   const sort = sortBy || "created_at"
@@ -38,6 +41,9 @@ const StoreTemplate = ({
           <p className="mt-3 max-w-xl text-sm leading-6 text-ui-fg-subtle">
             Browse the complete Northstar collection and find the pieces that fit your everyday.
           </p>
+          <div className="mt-6">
+            <StoreSearch initialQuery={query} />
+          </div>
         </div>
         <Suspense fallback={<SkeletonProductGrid />}>
           <PaginatedProducts
@@ -45,6 +51,7 @@ const StoreTemplate = ({
             page={pageNumber}
             countryCode={countryCode}
             optionValueIds={optionValueIds}
+            query={query}
           />
         </Suspense>
       </div>

@@ -1,9 +1,9 @@
 {
   "schema_version": "funnelmetry-medusa-cdc-inventory-price-shadow.v3",
   "generated_by": "funnelmetry-medusa-ci",
-  "status": "SHADOW_ONLY",
   "source_id": "medusa-reference",
   "medusa_version": "2.19.0",
+  "status": "SHADOW_ONLY",
   "cdc_inventory_price_contract": "reference.medusa.inventory_price_context.v2",
   "source_db_url_ref": "FUNNELMETRY_CDC_INVENTORY_PRICE_DATABASE_URL",
   "source_owner": "medusa-operator",

@@ -1,9 +1,9 @@
 {
   "schema_version": "funnelmetry-medusa-cdc-cart-line-item.v1",
   "generated_by": "funnelmetry-medusa-ci",
-  "status": "ACTIVE_REFERENCE",
   "source_id": "medusa-reference",
   "medusa_version": "2.19.0",
+  "status": "ACTIVE_REFERENCE",
   "cdc_contract": "reference.medusa.cart_line_item_added.v1",
   "snapshot_mode": "initial",
   "baseline_policy": "SNAPSHOT_NEVER_EMITS_CART_ITEM_ADDED",

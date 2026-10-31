@@ -119,8 +119,8 @@ importers:
   apps/storefront:
     dependencies:
       '@3002tad/funnelmetry-browser-sdk':
-        specifier: 0.3.0
-        version: 0.3.0
+        specifier: 0.4.0
+        version: 0.4.0
       '@headlessui/react':
         specifier: ^2.2.0
         version: 2.2.9(react-dom@19.0.5(react@19.0.5))(react@19.0.5)
@@ -227,12 +227,12 @@ importers:
 
 packages:
 
-  '@3002tad/funnelmetry-behavior-event-catalog@0.3.0':
-    resolution: {integrity: sha512-QNGBC8+5EUBbXo9iBFjuYz0SGQfWHaORBZ6P8fW7szPu1MPJZPM1EKi1jayG67NGNom7dZZMO//R/btAw075Bw==, tarball: https://npm.pkg.github.com/download/@3002tad/funnelmetry-behavior-event-catalog/0.3.0/45d046a2d03530003cb4eae69f24efe78626c056}
+  '@3002tad/funnelmetry-behavior-event-catalog@0.4.0':
+    resolution: {integrity: sha512-hGEWW19VxQAM41R1X7Z+JN6bt9GD2gNClZeYXHjbN6d3zFHPBwHynZC+2fMfqOwxTvTtapxYsJQkAG+76CyDTg==, tarball: https://npm.pkg.github.com/download/@3002tad/funnelmetry-behavior-event-catalog/0.4.0/cbbd10ef0822b45e87cb02aaaa623f133140f098}
     engines: {node: '>=20'}
 
-  '@3002tad/funnelmetry-browser-sdk@0.3.0':
-    resolution: {integrity: sha512-V6D9LGZEsshnwRlajsg3FZzQAegMyMhZZGKGjoJY4IMhA6pz3crCz8PoDG1whJT2iTGD5IrG8Gbb7etO7DmkBA==, tarball: https://npm.pkg.github.com/download/@3002tad/funnelmetry-browser-sdk/0.3.0/e81e6469e2514bf752f181424fd95758ebd909cc}
+  '@3002tad/funnelmetry-browser-sdk@0.4.0':
+    resolution: {integrity: sha512-/9reUx9pBy+KugAfL9M+hqXReqQPjCnOuf5p4/6SreG2JAwOhusjhKdcoE17i3weujEqdB/BmrcZGThOCKxfyA==, tarball: https://npm.pkg.github.com/download/@3002tad/funnelmetry-browser-sdk/0.4.0/fe0e8b313edf2c061167bbc11f11b5672109fad5}
 
   '@3002tad/funnelmetry-input-contract@0.2.3':
     resolution: {integrity: sha512-p9we2PuNvO4bV4ilfUqSkMxsiSmhe9pJaRp94kklFzTEz9j7sdAd/oRiBDWP+H5oNH1EF9Tb12GVULrKHhjONg==, tarball: https://npm.pkg.github.com/download/@3002tad/funnelmetry-input-contract/0.2.3/92cc140f7aefeeaff5df98e805d7ec98afee985c}
@@ -8464,11 +8464,11 @@ packages:
 
 snapshots:
 
-  '@3002tad/funnelmetry-behavior-event-catalog@0.3.0': {}
+  '@3002tad/funnelmetry-behavior-event-catalog@0.4.0': {}
 
-  '@3002tad/funnelmetry-browser-sdk@0.3.0':
+  '@3002tad/funnelmetry-browser-sdk@0.4.0':
     dependencies:
-      '@3002tad/funnelmetry-behavior-event-catalog': 0.3.0
+      '@3002tad/funnelmetry-behavior-event-catalog': 0.4.0
       '@3002tad/funnelmetry-input-contract': 0.2.3
 
   '@3002tad/funnelmetry-input-contract@0.2.3': {}

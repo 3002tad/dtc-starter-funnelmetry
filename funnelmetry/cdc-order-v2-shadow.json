@@ -1,9 +1,9 @@
 {
   "schema_version": "funnelmetry-medusa-cdc-order-v2-shadow.v1",
   "generated_by": "funnelmetry-medusa-ci",
-  "status": "SHADOW_ONLY",
   "source_id": "medusa-reference",
   "medusa_version": "2.19.0",
+  "status": "SHADOW_ONLY",
   "cdc_reference_contract": "reference.medusa.order_recorded_state.v2",
   "coverage_epoch_id": "cdc11_order_epoch1",
   "snapshot_mode": "initial",

@@ -8,7 +8,6 @@ const sourceId = "medusa-reference"
 const sourceKeyId = "medusa-reference-source"
 const allowedEventTypes = ["behavior.page_viewed","behavior.scroll_depth_reached","promotion.banner_impression","promotion.banner_clicked","behavior.filter_applied","behavior.product_viewed","checkout.started","behavior.search_query_submitted","context.cart_linked"]
 const reliability = {"failureMode":"fail_open","timeoutMs":800,"maxQueueSize":200,"retry":{"maxAttempts":3},"circuitBreaker":{"failureThreshold":3,"cooldownMs":30000}}
-
 const anonymousIdentityCookie = "funnelmetry_anonymous_id_medusa-reference"
 const sessionIdentityCookie = "funnelmetry_session_id_medusa-reference"
 
@@ -21,17 +20,13 @@ declare global { interface Window { __FUNNELMETRY_CONSENT__?: boolean } }
 let sdk: BrowserSdk | null | undefined
 let activePage: { pathname: string; context: PageContext } | undefined
 
-function enabled(eventType: string) {
-  return allowedEventTypes.includes(eventType)
-}
+function enabled(eventType: string) { return allowedEventTypes.includes(eventType) }
 
 function getSdk(): BrowserSdk | null {
   if (sdk !== undefined) return sdk
   try {
     sdk = createBrowserSdk({
-      sourceId,
-      sourceKeyId,
-      endpoint: "https://ingest.entidi.io.vn/v1/ingress/events",
+      sourceId, sourceKeyId, endpoint: "https://ingest.entidi.io.vn/v1/ingress/events",
       writeKey: process.env.NEXT_PUBLIC_FUNNELMETRY_BROWSER_WRITE_KEY ?? "",
       allowedEventTypes,
       maxAttempts: reliability.retry.maxAttempts,
@@ -46,8 +41,7 @@ function getSdk(): BrowserSdk | null {
 }
 
 function pageDescriptor(pathname: string | null) {
-  const safePathname = pathname || "/"
-  const segments = safePathname.split("/").filter(Boolean)
+  const segments = (pathname || "/").split("/").filter(Boolean)
   const route = segments.length > 0 ? segments.slice(1) : []
   if (route.length === 0) return { page_type: "home", path_template: "/{countryCode}" }
   if (route[0] === "store") return { page_type: "catalog", path_template: "/{countryCode}/store" }
@@ -69,13 +63,8 @@ function pageContext(pathname: string | null): PageContext | null {
   return activePage.context
 }
 
-function activePageContext() {
-  return pageContext(typeof window === "undefined" ? null : window.location.pathname)
-}
-
-function cartCorrelationId(cartId: string) {
-  return `cart:${cartId}`
-}
+function activePageContext() { return pageContext(typeof window === "undefined" ? null : window.location.pathname) }
+function cartCorrelationId(cartId: string) { return `cart:${cartId}` }
 
 function syncServerIdentity(currentSdk: BrowserSdk) {
   const identity = currentSdk.getIdentity()
@@ -96,12 +85,9 @@ function track(eventType: string, payload: EventPayload, context: { correlationI
   return currentSdk ? currentSdk.trackBehavior(eventType, payload, context) : Promise.resolve({ status: "inactive" })
 }
 
-
 export function FunnelmetryBootstrap() {
   const pathname = usePathname()
-
   useEffect(() => getSdk()?.attachLifecycle(), [])
-
   useEffect(() => {
     const currentSdk = getSdk()
     const page = pageContext(pathname)
@@ -111,7 +97,6 @@ export function FunnelmetryBootstrap() {
     if (!enabled("behavior.scroll_depth_reached")) return
     return currentSdk.attachScrollDepthObserver({ page })
   }, [pathname])
-
   return null
 }
 
@@ -119,8 +104,7 @@ export function FunnelmetryProductViewed({ productId, variantId }: { productId: 
   const pathname = usePathname()
   useEffect(() => {
     const page = pageContext(pathname)
-    if (!page) return
-    void track("behavior.product_viewed", { product_id: productId, ...(variantId ? { variant_id: variantId } : {}), page_instance_id: page.page_instance_id })
+    if (page) void track("behavior.product_viewed", { product_id: productId, ...(variantId ? { variant_id: variantId } : {}), page_instance_id: page.page_instance_id })
   }, [pathname, productId, variantId])
   return null
 }
@@ -130,54 +114,39 @@ export function FunnelmetryCheckoutStarted({ cartId }: { cartId: string }) {
   useEffect(() => {
     const page = pageContext(pathname)
     const currentSdk = getSdk()
-    if (!currentSdk || !page || !enabled("checkout.started")) return
-    void currentSdk.trackBehaviorOnce(`checkout.started:${cartId}`, "checkout.started", { cart_id: cartId, step: "address", page_instance_id: page.page_instance_id }, { correlationId: cartCorrelationId(cartId) })
+    if (currentSdk && page && enabled("checkout.started")) void currentSdk.trackBehaviorOnce(`checkout.started:${cartId}`, "checkout.started", { cart_id: cartId, step: "address", page_instance_id: page.page_instance_id }, { correlationId: cartCorrelationId(cartId) })
   }, [cartId, pathname])
   return null
 }
 
-
 export function trackFilterApplied(input: { filterKeys: string[]; activeFilterCount: number }) {
   const page = activePageContext()
-  if (!page) return Promise.resolve({ status: "inactive" })
-  return track("behavior.filter_applied", { page_instance_id: page.page_instance_id, filter_keys: input.filterKeys, active_filter_count: input.activeFilterCount })
+  return page ? track("behavior.filter_applied", { page_instance_id: page.page_instance_id, filter_keys: input.filterKeys, active_filter_count: input.activeFilterCount }) : Promise.resolve({ status: "inactive" })
 }
 
 export function FunnelmetryPromotionBanner({ bannerId, placementId, campaignId, children }: { bannerId: string; placementId: string; campaignId?: string; children: ReactNode }) {
   const pathname = usePathname()
   const element = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
-    const currentSdk = getSdk()
-    const page = pageContext(pathname)
+    const currentSdk = getSdk(); const page = pageContext(pathname)
     if (!currentSdk || !page || !element.current || !enabled("promotion.banner_impression")) return
     return currentSdk.attachBannerImpressionObserver({ element: element.current, bannerId, placementId, pageInstanceId: page.page_instance_id, ...(campaignId ? { campaignId } : {}) })
   }, [bannerId, campaignId, pathname, placementId])
-
-  return <div ref={element} onClick={() => {
-    const page = pageContext(pathname)
-    if (page) void track("promotion.banner_clicked", { banner_id: bannerId, placement_id: placementId, page_instance_id: page.page_instance_id, ...(campaignId ? { campaign_id: campaignId } : {}) })
-  }}>{children}</div>
+  return <div ref={element} onClick={() => { const page = pageContext(pathname); if (page) void track("promotion.banner_clicked", { banner_id: bannerId, placement_id: placementId, page_instance_id: page.page_instance_id, ...(campaignId ? { campaign_id: campaignId } : {}) }) }}>{children}</div>
 }
 
 export function trackSearchQuery(query: string, searchInteractionId: string) {
   try {
     if (!enabled("behavior.search_query_submitted")) return Promise.resolve({ status: "disabled_by_manifest" })
     const page = activePageContext()
-    return page ? getSdk()?.trackSearchQuery(query, searchInteractionId, page.page_instance_id) ?? Promise.resolve({ status: "inactive" })
-      : Promise.resolve({ status: "inactive" })
-  } catch {
-    return Promise.resolve({ status: "inactive" })
-  }
+    return page ? getSdk()?.trackSearchQuery(query, searchInteractionId, page.page_instance_id) ?? Promise.resolve({ status: "inactive" }) : Promise.resolve({ status: "inactive" })
+  } catch { return Promise.resolve({ status: "inactive" }) }
 }
 
 export function trackCartContext(cartId: string) {
   try {
     if (!enabled("context.cart_linked")) return Promise.resolve({ status: "disabled_by_manifest" })
     const page = activePageContext()
-    return page ? getSdk()?.trackCartContext(cartId, page.page_instance_id) ?? Promise.resolve({ status: "inactive" })
-      : Promise.resolve({ status: "inactive" })
-  } catch {
-    return Promise.resolve({ status: "inactive" })
-  }
+    return page ? getSdk()?.trackCartContext(cartId, page.page_instance_id) ?? Promise.resolve({ status: "inactive" }) : Promise.resolve({ status: "inactive" })
+  } catch { return Promise.resolve({ status: "inactive" }) }
 }

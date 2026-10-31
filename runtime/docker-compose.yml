@@ -18,23 +18,41 @@ services:
       timeout: 5s
       retries: 20
 
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1000"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   backend:
     build:
       context: ..
       dockerfile: runtime/Dockerfile
+      target: backend-runtime
+      secrets:
+        - npm_token
     command: >-
-      sh -c "cd apps/backend && pnpm exec medusa db:migrate && pnpm dev"
+      sh -c "cd apps/backend && pnpm exec medusa db:migrate && cd .medusa/server && ../../node_modules/.bin/medusa start"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://medusa:medusa@postgres:5432/medusa?sslmode=disable
       REDIS_URL: redis://redis:6379
+      REDIS_PREFIX: "medusa-reference:"
       STORE_CORS: http://localhost:8000
       ADMIN_CORS: http://localhost:9000
       AUTH_CORS: http://localhost:9000
       JWT_SECRET: local-development-only-jwt-secret
       COOKIE_SECRET: local-development-only-cookie-secret
+      MEDUSA_COOKIE_SECURE: "false"
     ports:
       - "127.0.0.1:9000:9000"
 
@@ -42,13 +60,26 @@ services:
     build:
       context: ..
       dockerfile: runtime/Dockerfile
-    command: sh -c "cd apps/storefront && pnpm dev"
+      target: storefront-runtime
+      args:
+        NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:-http://localhost:8000}
+        NEXT_PUBLIC_MEDUSA_BACKEND_URL: ${NEXT_PUBLIC_MEDUSA_BACKEND_URL:-http://api.localhost:9000}
+        NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY:-}
+        NEXT_PUBLIC_DEFAULT_REGION: ${NEXT_PUBLIC_DEFAULT_REGION:-dk}
+        NEXT_PUBLIC_FUNNELMETRY_BROWSER_WRITE_KEY: ${NEXT_PUBLIC_FUNNELMETRY_BROWSER_WRITE_KEY:-}
+        NEXT_PUBLIC_FUNNELMETRY_INGEST_URL: ${NEXT_PUBLIC_FUNNELMETRY_INGEST_URL:-https://ingest-test.entidi.io.vn/v1/ingress/events}
+      secrets:
+        - npm_token
+    command: sh -c "cd apps/storefront && ./node_modules/.bin/next start -p 8000"
     depends_on:
       backend:
         condition: service_started
     environment:
-      NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://api.localhost:9000
-      NEXT_PUBLIC_DEFAULT_REGION: dk
+      NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:-http://localhost:8000}
+      NEXT_PUBLIC_MEDUSA_BACKEND_URL: ${NEXT_PUBLIC_MEDUSA_BACKEND_URL:-http://api.localhost:9000}
+      NEXT_PUBLIC_DEFAULT_REGION: ${NEXT_PUBLIC_DEFAULT_REGION:-dk}
+      NEXT_PUBLIC_FUNNELMETRY_INGEST_URL: ${NEXT_PUBLIC_FUNNELMETRY_INGEST_URL:-https://ingest-test.entidi.io.vn/v1/ingress/events}
+      NEXT_TELEMETRY_DISABLED: "1"
     env_file:
       - path: ../apps/storefront/.env.local
         required: false
@@ -59,3 +90,8 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
+
+secrets:
+  npm_token:
+    environment: NODE_AUTH_TOKEN

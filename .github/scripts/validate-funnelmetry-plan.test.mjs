@@ -64,3 +64,22 @@ test('rejects a planner reporting an inactive CDC catalog', () => {
   plan.capabilities.cdcCatalogState = 'NOT_REQUESTED'
   assert.throws(() => validatePlan(plan), /CDC-primary contract/)
 })
+
+test('accepts V3 browser search and CDC cart without storefront server hooks', () => {
+  const plan = approvedPlan()
+  plan.schemaVersion = 'funnelmetry-ci-plan.v3'
+  plan.manifest.apiVersion = 'funnelmetry.io/v3'
+  plan.manifest.bindings.browser.push('behavior.search_query_submitted')
+  plan.manifest.bindings.browser.push('context.cart_linked')
+  plan.manifest.bindings.storefrontServer = []
+  plan.manifest.cdcCartLineItem = { profile: 'reference.medusa.cart_line_item_added.v1' }
+  Object.assign(plan.capabilities, {
+    cartItemPersisted: 'CDC_CONFIGURED', searchSubmitted: 'BROWSER_SDK',
+    cdcCartState: 'CDC_CONFIGURED',
+  })
+  assert.deepEqual(validatePlan(plan), {
+    sourceFingerprint: 'source-fingerprint', changeCount: 0,
+  })
+  plan.manifest.bindings.storefrontServer = ['cart.item_added']
+  assert.throws(() => validatePlan(plan), /omit server message hooks/)
+})

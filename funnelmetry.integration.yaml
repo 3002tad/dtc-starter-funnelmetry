@@ -27,7 +27,9 @@ bindings:
     - behavior.filter_applied
     - behavior.product_viewed
     - checkout.started
+    # Standalone Search Demand Analytics; no outcome or search-to-cart attribution.
     - behavior.search_query_submitted
+    # Optional identity evidence for cart/session, not a search analytics dependency.
     - context.cart_linked
   storefront_server: []
   medusa_backend: []

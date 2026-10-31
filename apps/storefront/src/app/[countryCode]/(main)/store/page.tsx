@@ -12,6 +12,8 @@ export const metadata: Metadata = {
 type StorePageSearchParams = Record<string, string | string[] | undefined> & {
   sortBy?: SortOptions
   page?: string
+  q?: string
+  fm_search_interaction_id?: string
   optionValueIds?: string | string[]
 }
 
@@ -25,7 +27,7 @@ type Params = {
 export default async function StorePage(props: Params) {
   const params = await props.params;
   const searchParams = await props.searchParams;
-  const { sortBy, page } = searchParams
+  const { sortBy, page, q, fm_search_interaction_id: searchInteractionId } = searchParams
   const optionValueIds = parseOptionValueIds(searchParams)
 
   return (
@@ -34,6 +36,8 @@ export default async function StorePage(props: Params) {
       page={page}
       countryCode={params.countryCode}
       optionValueIds={optionValueIds}
+      query={typeof q === "string" ? q : undefined}
+      searchInteractionId={typeof searchInteractionId === "string" ? searchInteractionId : undefined}
     />
   )
 }

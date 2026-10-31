@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { listProducts } from "@lib/data/products"
 import { getRegion, listRegions } from "@lib/data/regions"
 import ProductTemplate from "@modules/products/templates"
+import { FunnelmetryProductViewed } from "@funnelmetry/client"
 import { HttpTypes } from "@medusajs/types"
 
 type Props = {
@@ -121,11 +122,14 @@ export default async function ProductPage(props: Props) {
   const images = getImagesForVariant(pricedProduct, selectedVariantId)
 
   return (
-    <ProductTemplate
+    <>
+      <FunnelmetryProductViewed productId={pricedProduct.id} />
+      <ProductTemplate
       product={pricedProduct}
       region={region}
       countryCode={params.countryCode}
       images={images ?? []}
-    />
+      />
+    </>
   )
 }

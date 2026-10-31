@@ -1,0 +1,26 @@
+{
+  "schema_version": "funnelmetry-medusa-cdc-order-v2-shadow.v1",
+  "generated_by": "funnelmetry-medusa-ci",
+  "status": "SHADOW_ONLY",
+  "source_id": "medusa-reference",
+  "medusa_version": "2.19.0",
+  "cdc_reference_contract": "reference.medusa.order_recorded_state.v2",
+  "coverage_epoch_id": "cdc11_order_epoch1",
+  "snapshot_mode": "initial",
+  "baseline_policy": "BASELINE_NEVER_ON",
+  "historical_gap_status": "INCOMPLETE",
+  "source_db_url_ref": "FUNNELMETRY_CDC_ORDER_V2_DATABASE_URL",
+  "source_owner": "medusa-operator",
+  "pipeline_owner": "pipeline-operator",
+  "publication": "funnelmetry_cdc_order_v2_e1",
+  "slot": "funnelmetry_cdc_order_v2_e1",
+  "topic_prefix": "cdc_shadow_medusa_order_v2_e1",
+  "fact_topic": "cdc_shadow_reference.order_recorded_state.v2",
+  "table_columns": [
+    "public.order:id,deleted_at",
+    "public.order_cart:id,order_id,cart_id",
+    "public.cart:id,completed_at"
+  ],
+  "analytical_authority": "reference.medusa.order_recorded_state.v2",
+  "runtime_activation": "OPERATOR_CONTROLLED_SEPARATE_FROM_INSTALLER"
+}
